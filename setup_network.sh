@@ -7,6 +7,8 @@ set -e
 echo "Updating system..."
 sudo apt update && sudo apt upgrade -y
 
+echo "Installing dhcp"
+sudo apt install dhcpcd5 -y
 # Install required packages
 echo "Installing hostapd and dnsmasq..."
 sudo apt install -y hostapd dnsmasq
