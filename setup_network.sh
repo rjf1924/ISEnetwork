@@ -108,7 +108,7 @@ sudo systemctl enable nftables
 
 # Restart networking services to apply changes
 echo "Restarting networking services..."
-sudo systemctl restart networking
+sudo systemctl restart dhcpcd
 
 # Start services
 echo "Starting hostapd and dnsmasq..."
