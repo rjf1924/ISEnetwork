@@ -69,18 +69,42 @@ echo "Enabling IP forwarding..."
 sudo sed -i "s/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/" /etc/sysctl.conf
 sudo sysctl -p
 
-# Setup NAT (Network Address Translation) from wlan1 to wlan0
-echo "Setting up NAT from wlan1 to wlan0..."
-sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
-sudo iptables -A FORWARD -i wlan1 -o wlan0 -j ACCEPT
-sudo iptables -A FORWARD -i wlan0 -o wlan1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+echo "Setting up NAT from wlan1 to wlan0 using nftables..."
+# Create nftables configuration
+sudo bash -c 'cat > /etc/nftables.conf <<EOF
+#!/usr/sbin/nft -f
 
-# Save iptables rules
-sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
+table inet nat {
+    chain prerouting {
+        type nat hook prerouting priority 0;
+    }
 
-# Make iptables persistent on reboot
-echo "Making NAT persistent..."
-grep -qxF 'iptables-restore < /etc/iptables.ipv4.nat' /etc/rc.local || sudo bash -c 'sed -i "/^exit 0/i iptables-restore < /etc/iptables.ipv4.nat" /etc/rc.local'
+    chain postrouting {
+        type nat hook postrouting priority 100;
+        oifname "wlan0" masquerade
+    }
+}
+
+table inet filter {
+    chain forward {
+        type filter hook forward priority 0;
+        iifname "wlan1" oifname "wlan0" accept
+        iifname "wlan0" oifname "wlan1" ct state related,established accept
+    }
+}
+EOF'
+
+# Enable and start nftables service
+sudo systemctl enable nftables
+sudo systemctl start nftables
+
+# Apply nftables rules
+echo "Applying nftables rules..."
+sudo nft -f /etc/nftables.conf
+
+# Ensure nftables rules persist on reboot
+echo "Ensuring nftables rules persist on reboot..."
+sudo systemctl enable nftables
 
 # Restart networking services to apply changes
 echo "Restarting networking services..."
