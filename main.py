@@ -2,6 +2,7 @@ import socket
 import numpy as np
 import multiprocessing
 from multiprocessing import Process, Queue, Manager
+from multiprocessing.managers import BaseManager
 import paho.mqtt.client as mqtt
 import time
 import subprocess
@@ -9,13 +10,12 @@ import netifaces
 import json
 import threading
 
-import network
-from network import get_callback
+
 
 
 def mqtt_listener(config, client_ip, server_ip, q):
     print(f"mqtt_listener started...")
-
+    from network import get_callback
     def on_message(client, userdata, message):
         # print(f"Client: {client}")
         # print(f"Userdata: {userdata}")
@@ -28,6 +28,7 @@ def mqtt_listener(config, client_ip, server_ip, q):
         client.publish("connect", f"{config['name']} {client_ip}")
 
     try:
+        get_callback("test")
         client = mqtt.Client()
         client.on_message = on_message
         client.on_connect = on_connect
@@ -40,15 +41,15 @@ def mqtt_listener(config, client_ip, server_ip, q):
             msg = q.get()
             if msg[0] == 0:  # Mqtt handler
                 _, topic, message = msg
-                handler = get_callback(topic)
-                if handler:
-                    handler(msg)
+                handlers = get_callback(topic)
+                if handlers:
+                    for handler in handlers:
+                        handler(msg)
             if msg[0] == 1:
                 client.publish(topic, msg)
 
     except Exception as e:
-        print("[Error connecting MQTT Listener]")
-        # print(e)
+        print(f"[Error connecting MQTT Listener]\n{e}")
 
 
 # Socket Setup
@@ -136,8 +137,25 @@ def main():
     peer_list = manager.dict()
 
     peer_list[config['name']] = CLIENT_IP
-    network.init(mqtt_callbacks, mqtt_queue, socket_queue, peer_list)
 
+    # --- BaseManager Server Setup ---
+    class SharedManager(BaseManager): pass
+
+    SharedManager.register('get_mqtt_callbacks', callable=lambda: mqtt_callbacks)
+    SharedManager.register('get_mqtt_queue', callable=lambda: mqtt_queue)
+    SharedManager.register('get_socket_queue', callable=lambda: socket_queue)
+    SharedManager.register('get_peer_list', callable=lambda: peer_list)
+
+    def run_manager_server():
+        m = SharedManager(address=('', 50000), authkey=b'sharedsecret')
+        server = m.get_server()
+        print("Shared manager server running at port 50000")
+        server.serve_forever()
+
+    # Start the BaseManager server in background thread
+    threading.Thread(target=run_manager_server, daemon=True).start()
+
+    # --- Start Proccesses ---
     mqtt_process = Process(target=mqtt_listener, args=(config, CLIENT_IP, SERVER_IP, mqtt_queue))
     socket_process = Process(target=socket_listener, args=(config, CLIENT_IP, SERVER_IP, socket_queue))
     event_loop_process = Process(target=event_loop, args=(config, CLIENT_IP, SERVER_IP, mqtt_queue, socket_queue, peer_list))
