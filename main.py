@@ -46,10 +46,8 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list)
         while True:
             try:
                 msg = publish_queue.get_nowait()
-
                 topic, message = msg
-                client.publish(topic, msg)
-                print("Received publish req:", msg)
+                client.publish(topic, message)
             except Empty:
                 continue
     except Exception as e:
