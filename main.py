@@ -53,7 +53,7 @@ def mqtt_listener(config, client_ip, server_ip, q):
 
 # Socket Setup
 def socket_listener(config, client_ip, server_ip, q):
-    print("Socket listener...")
+    print("Socket listener started...")
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
         while True:
@@ -121,6 +121,7 @@ def get_config():
 
 
 def main():
+    print("ISE NETWORK STARTING... USE CTRL-C TO EXIT")
     config = get_config()
     CLIENT_IP = get_my_ip()
     SERVER_IP = get_server_ip()
