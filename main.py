@@ -93,6 +93,8 @@ def event_loop(config, client_ip, server_ip, mqtt_queue, socket_queue, peer_list
 
 def get_server_ip():
     gws = netifaces.gateways()
+    if len(gws['default']) == 0:
+        return get_my_ip()
     return gws['default'][netifaces.AF_INET][0]
 
 
