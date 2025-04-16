@@ -24,7 +24,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list)
         topic = message.topic
         print(f"MQTT: {topic} - {msg}")
         if topic == "connect":  # Handle new incoming connections
-            name, ip = msg[2].split()  # "{config['name']} {client_ip}"
+            name, ip = msg.split()  # "{config['name']} {client_ip}"
             if name not in peer_list:
                 print(f"Registered {name} under {ip}")
                 peer_list[name] = ip
