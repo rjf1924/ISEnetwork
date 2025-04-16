@@ -5,11 +5,17 @@ set -e
 
 # Define virtual environment directory name
 VENV_DIR="venv"
+# Define script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Update and upgrade system packages (optional)
 echo "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
 
+# Install mosquito clients
+echo "Installing mosquito and mosquito-clients"
+sudo apt install -y mosquitto mosquitto-clients
+sudo systemctl enable mosquitto
 
 # Create virtual environment
 echo "Creating virtual environment..."
@@ -30,6 +36,13 @@ if [ -f "requirements.txt" ]; then
 else
     echo "No requirements.txt file found!"
 fi
+
+# Prompt for name
+read -p "Enter a device name: " devicename
+
+# Save to config.json
+echo "Saving configuration..."
+echo "{\"name\": \"${devicename}\"}" > "$SCRIPT_DIR/config.json"
 
 echo "Setup complete. To activate the environment later, run:"
 echo "source $VENV_DIR/bin/activate"
