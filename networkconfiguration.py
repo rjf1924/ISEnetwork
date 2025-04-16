@@ -30,9 +30,8 @@ def setup_ap(my_serial):
                         'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', WIFI_PASSWORD],
                        check=True)
     except Exception as error:
-        print()
-        if error.returncode == 4:
-            print("Successful!")
+        print("Failed")
+        print(error)
 
 def connect_to_leader(leader_serial):
     ssid = LEADER_SSID_PREFIX + leader_serial
