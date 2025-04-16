@@ -9,18 +9,23 @@ import subprocess
 import netifaces
 import json
 import threading
+from queue import Empty
 
 
 
-
-def mqtt_listener(config, client_ip, server_ip, q):
+def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list):
     print(f"mqtt_listener started...")
     from network import get_callback
     def on_message(client, userdata, message):
         # print(f"Client: {client}")
         # print(f"Userdata: {userdata}")
-        # print(f"Received system MQTT message: {message.payload.decode()}")
-        q.put((0, message.topic, message.payload.decode()))
+        print(f"Received system MQTT message: {message.payload.decode()}")
+
+        if message.topic == "connect":  # Handle new incoming connections
+            name, ip = msg[2].split()  # "{config['name']} {client_ip}"
+            if name not in peer_list:
+                print(f"Registered {name} under {ip}")
+                peer_list[name] = ip
 
     def on_connect(client, userdata, flags, rc):
         print(f"MQTT Connected with result code {rc}")
@@ -28,7 +33,6 @@ def mqtt_listener(config, client_ip, server_ip, q):
         client.publish("connect", f"{config['name']} {client_ip}")
 
     try:
-        get_callback("test")
         client = mqtt.Client()
         client.on_message = on_message
         client.on_connect = on_connect
@@ -38,18 +42,18 @@ def mqtt_listener(config, client_ip, server_ip, q):
 
         # Handle publish queue
         while True:
-            msg = q.get()
-            if msg[0] == 0:  # Mqtt handler
-                _, topic, message = msg
-                handlers = get_callback(topic)
-                if handlers:
-                    for handler in handlers:
-                        handler(msg)
-            if msg[0] == 1:
-                client.publish(topic, msg)
+            try:
+                msg = publish_queue.get_nowait()
 
+                topic, message = msg
+                client.publish(topic, msg)
+                print("Received publish req:", msg)
+            except Empty:
+                continue
     except Exception as e:
-        print(f"[Error connecting MQTT Listener]\n{e}")
+        print(f"[Error connecting MQTT Listener]")
+        print(e)
+
 
 
 # Socket Setup
@@ -77,19 +81,6 @@ def socket_listener(config, client_ip, server_ip, q):
     while True:
         conn, addr = server_socket.accept()
         threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
-
-
-def event_loop(config, client_ip, server_ip, mqtt_queue, socket_queue, peer_list):
-    print("Starting main event loop...")
-    while True:
-        msg = mqtt_queue.get()
-        print("MQTT: ", msg)
-        if msg[0] == 0:
-            if msg[1] == "connect":  # Handle new incoming connections
-                name, ip = msg[2].split()  # "{config['name']} {client_ip}"
-                if name not in peer_list:
-                    print(f"Registered {name} under {ip}")
-                    peer_list[name] = ip
 
 
 def get_server_ip():
@@ -132,7 +123,7 @@ def main():
 
     manager = Manager()  # Shared instance of callbacks and queues
     mqtt_callbacks = manager.dict()
-    mqtt_queue = manager.Queue()
+    mqtt_pub_queue = manager.Queue()
     socket_queue = manager.Queue()
     peer_list = manager.dict()
 
@@ -142,7 +133,7 @@ def main():
     class SharedManager(BaseManager): pass
 
     SharedManager.register('get_mqtt_callbacks', callable=lambda: mqtt_callbacks)
-    SharedManager.register('get_mqtt_queue', callable=lambda: mqtt_queue)
+    SharedManager.register('get_mqtt_pub_queue', callable=lambda: mqtt_pub_queue)
     SharedManager.register('get_socket_queue', callable=lambda: socket_queue)
     SharedManager.register('get_peer_list', callable=lambda: peer_list)
 
@@ -156,18 +147,14 @@ def main():
     threading.Thread(target=run_manager_server, daemon=True).start()
 
     # --- Start Proccesses ---
-    mqtt_process = Process(target=mqtt_listener, args=(config, CLIENT_IP, SERVER_IP, mqtt_queue))
+    mqtt_process = Process(target=mqtt_listener, args=(config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list))
     socket_process = Process(target=socket_listener, args=(config, CLIENT_IP, SERVER_IP, socket_queue))
-    event_loop_process = Process(target=event_loop, args=(config, CLIENT_IP, SERVER_IP, mqtt_queue, socket_queue, peer_list))
 
     mqtt_process.start()
     socket_process.start()
-    event_loop_process.start()
 
     mqtt_process.join()
     socket_process.join()
-    event_loop_process.join()
-
 
 if __name__ == "__main__":
     main()

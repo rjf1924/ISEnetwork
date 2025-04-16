@@ -5,7 +5,7 @@ class SharedManager(BaseManager): pass
 
 
 SharedManager.register('get_mqtt_callbacks')
-SharedManager.register('get_mqtt_queue')
+SharedManager.register('get_mqtt_pub_queue')
 SharedManager.register('get_socket_queue')
 SharedManager.register('get_peer_list')
 
@@ -13,7 +13,7 @@ m = SharedManager(address=('localhost', 50000), authkey=b'sharedsecret')
 m.connect()
 
 _mqtt_callbacks = m.get_mqtt_callbacks()
-_mqtt_queue = m.get_mqtt_queue()
+_mqtt_pub_queue = m.get_mqtt_pub_queue()
 _socket_queue = m.get_socket_queue()
 _peer_list = m.get_peer_list()
 
@@ -28,7 +28,7 @@ def subscribe(topic, func):
 
 
 def publish(topic, message):
-    _mqtt_queue.put((1, topic, message))
+    _mqtt_pub_queue.put((topic, message))
 
 
 def get_callback(topic):
