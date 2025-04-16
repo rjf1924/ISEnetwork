@@ -3,7 +3,7 @@ import time
 
 LEADER_SSID_PREFIX = "pi-mesh-"
 WIFI_INTERFACE = "wlan0"
-
+WIFI_PASSWORD = 'ise411meshnet'
 def get_serial():
     with open('/proc/cpuinfo') as f:
         for line in f:
@@ -26,12 +26,12 @@ def elect_leader(remote_serials, my_serial):
 def setup_ap(my_serial):
     ssid = LEADER_SSID_PREFIX + my_serial
     subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot', 'ifname', WIFI_INTERFACE,
-                    'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', 'ise411meshnet'],
+                    'con-name', ssid, 'ssid', ssid, 'band', 'a', 'password', WIFI_PASSWORD],
                    check=True)
 
 def connect_to_leader(leader_serial):
     ssid = LEADER_SSID_PREFIX + leader_serial
-    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', 'ise411meshnet'],
+    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', WIFI_PASSWORD],
                    check=True)
 
 def main():
