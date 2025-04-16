@@ -100,12 +100,18 @@ def get_server_ip():
 
 
 def get_my_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.connect(("8.8.8.8", 80))
-        return s.getsockname()[0]
-    finally:
-        s.close()
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        finally:
+            s.close()
+    except Exception as e:
+        try:
+            return netifaces.ifaddresses('wlan0')[netifaces.AF_INET][0]['addr']
+        except (KeyError, IndexError):
+            return None
 
 def get_config():
     with open("config.json", "r") as f:
