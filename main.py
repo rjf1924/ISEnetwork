@@ -13,35 +13,72 @@ from queue import Empty
 
 
 
-def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list):
+def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list, last_heartbeat):
     print(f"mqtt_listener started...")
     from network import get_callback
     def on_message(client, userdata, message):
         # print(f"Client: {client}")
         # print(f"Userdata: {userdata}")
-
         msg = message.payload.decode()
         topic = message.topic
         print(f"MQTT: {topic}:{msg}")
-        if topic == "connect":  # Handle new incoming connections
-            name, ip = msg.split()  # "{config['name']} {client_ip}"
+
+        # Handle connect event
+        if topic == "connect":
+            name, ip = msg.split()
             if name not in peer_list:
                 print(f"Registered {name} under {ip}")
                 peer_list[name] = ip
-                client.publish("connect", f"{config['name']} {client_ip}")  # Send back our connection to help update their peer list
+                client.publish("connect", f"{config['name']} {client_ip}")
 
+        # Handle status events
+        elif topic.startswith("status/"):
+            name = topic.split("/", 1)[1]
+            if msg == "offline":
+                if name in peer_list:
+                    print(f"{name} went offline, removing from peer_list")
+                    del peer_list[name]
+
+        elif topic.startswith("heartbeat/"):
+            name = topic.split("/", 1)[1]
+            last_heartbeat[name] = time.time()
     def on_connect(client, userdata, flags, rc):
         print(f"MQTT Connected with result code {rc}")
         client.subscribe("#")
+        client.subscribe("status/#")
+        client.subscribe("heartbeat/#")
         client.publish("connect", f"{config['name']} {client_ip}")
+        client.publish(f"status/{config['name']}", "online", retain=True)
 
     try:
         client = mqtt.Client()
         client.on_message = on_message
         client.on_connect = on_connect
+        client.will_set(f"status/{config['name']}", payload="offline", qos=1, retain=True)
         client.connect(server_ip, 1883)
 
         client.loop_start()
+
+        def heartbeat_loop():
+            while True:
+                client.publish(f"heartbeat/{config['name']}", str(time.time()), retain=True)
+                time.sleep(5)  # heartbeat interval
+
+        def peer_watchdog():
+            TIMEOUT = 15  # seconds without heartbeat = dead
+            while True:
+                now = time.time()
+                dead = [name for name, t in last_heartbeat.items() if now - t > TIMEOUT]
+                for name in dead:
+                    if name in peer_list:
+                        print(f"[WATCHDOG] Peer {name} silent for too long. Removing.")
+                        del peer_list[name]
+                        del last_heartbeat[name]
+                        client.publish(f"status/{name}", "offline", retain=True)
+                time.sleep(5)
+
+        threading.Thread(target=peer_watchdog, daemon=True).start()
+        threading.Thread(target=heartbeat_loop, daemon=True).start()
 
         # Handle publish queue
         while True:
@@ -128,6 +165,8 @@ def main():
     socket_queue = manager.Queue()
     peer_list = manager.dict()
 
+    last_heartbeat = manager.dict()
+
     peer_list[config['name']] = CLIENT_IP
 
     # --- BaseManager Server Setup ---
@@ -148,7 +187,7 @@ def main():
     threading.Thread(target=run_manager_server, daemon=True).start()
 
     # --- Start Proccesses ---
-    mqtt_process = Process(target=mqtt_listener, args=(config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list))
+    mqtt_process = Process(target=mqtt_listener, args=(config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list, last_heartbeat))
     socket_process = Process(target=socket_listener, args=(config, CLIENT_IP, SERVER_IP, socket_queue))
 
     mqtt_process.start()
