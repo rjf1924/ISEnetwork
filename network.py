@@ -21,10 +21,9 @@ print("Network Variables Synced to Main Process...")
 
 
 def subscribe(topic, func):
-    if topic not in list(_mqtt_callbacks.keys()):
-        _mqtt_callbacks[topic] = [func]
-    else:
-        _mqtt_callbacks[topic].append(func)
+    current = _mqtt_callbacks.get(topic, [])
+    current.append(func)
+    _mqtt_callbacks[topic] = current  # reassign whole list
 
 
 def publish(topic, message):
