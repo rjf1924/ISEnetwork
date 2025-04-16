@@ -17,9 +17,9 @@ def mqtt_listener(config, client_ip, server_ip, q):
     print(f"mqtt_listener started...")
 
     def on_message(client, userdata, message):
-        print(f"Client: {client}")
-        print(f"Userdata: {userdata}")
-        print(f"Received system MQTT message: {message.payload.decode()}")
+        # print(f"Client: {client}")
+        # print(f"Userdata: {userdata}")
+        # print(f"Received system MQTT message: {message.payload.decode()}")
         q.put((0, message.topic, message.payload.decode()))
 
     def on_connect(client, userdata, flags, rc):
@@ -82,14 +82,13 @@ def event_loop(config, client_ip, server_ip, mqtt_queue, socket_queue, peer_list
     print("Starting main event loop...")
     while True:
         msg = mqtt_queue.get()
+        print("MQTT: ", msg)
         if msg[0] == 0:
             if msg[1] == "connect":  # Handle new incoming connections
                 name, ip = msg[2].split()  # "{config['name']} {client_ip}"
                 if name not in peer_list:
                     print(f"Registered {name} under {ip}")
                     peer_list[name] = ip
-
-        print(msg)
 
 
 def get_server_ip():
