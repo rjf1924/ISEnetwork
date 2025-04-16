@@ -38,10 +38,11 @@ def main():
     my_serial = get_serial()
     print(f"My serial: {my_serial}")
 
-    # print("Scanning for nearby mesh APs...")
-    # seen_ssids = scan_wifi()
-    # remote_serials = [extract_serial_from_ssid(ssid) for ssid in seen_ssids]
-    #
+    print("Scanning for nearby mesh APs...")
+    seen_ssids = scan_wifi()
+    remote_serials = [extract_serial_from_ssid(ssid) for ssid in seen_ssids]
+    print(f"Remote Serials: {remote_serials}")
+
     # if not remote_serials:
     #     print("No other mesh nodes found. Becoming leader.")
     #     setup_ap(my_serial)
