@@ -26,12 +26,12 @@ def elect_leader(remote_serials, my_serial):
 def setup_ap(my_serial):
     ssid = LEADER_SSID_PREFIX + my_serial
     subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot', 'ifname', WIFI_INTERFACE,
-                    'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', 'ise411'],
+                    'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', 'ise411meshnet'],
                    check=True)
 
 def connect_to_leader(leader_serial):
     ssid = LEADER_SSID_PREFIX + leader_serial
-    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', 'ise411'],
+    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', 'ise411meshnet'],
                    check=True)
 
 def main():
