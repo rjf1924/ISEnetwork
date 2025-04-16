@@ -27,9 +27,10 @@ def setup_ap(my_serial):
     ssid = LEADER_SSID_PREFIX + my_serial
     try:
         subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot', 'ifname', WIFI_INTERFACE,
-                        'con-name', ssid, 'ssid', ssid, 'band', 'a', 'password', WIFI_PASSWORD],
+                        'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', WIFI_PASSWORD],
                        check=True)
     except Exception as error:
+        print()
         if error.returncode == 4:
             print("Successful!")
 
