@@ -2,5 +2,4 @@
 # Prerequisites
 None for now 
 # Installation
-To install, clone this repository and run setup_network if rpi4 is not already setup
-Run install.sh
+To install, clone this repository and run install.sh followed by run.sh
