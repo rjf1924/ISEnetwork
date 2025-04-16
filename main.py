@@ -22,12 +22,13 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list)
 
         msg = message.payload.decode()
         topic = message.topic
-        print(f"MQTT: {topic} - {msg}")
+        print(f"MQTT: {topic}:{msg}")
         if topic == "connect":  # Handle new incoming connections
             name, ip = msg.split()  # "{config['name']} {client_ip}"
             if name not in peer_list:
                 print(f"Registered {name} under {ip}")
                 peer_list[name] = ip
+                client.publish("connect", f"{config['name']} {client_ip}")  # Send back our connection to help update their peer list
 
     def on_connect(client, userdata, flags, rc):
         print(f"MQTT Connected with result code {rc}")
