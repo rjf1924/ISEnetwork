@@ -46,16 +46,17 @@ def main():
     if not remote_serials:
         print("No other mesh nodes found. Becoming leader.")
         setup_ap(my_serial)
+        print("Successfully became leader...")
         return
-    #
-    # leader_serial = elect_leader(remote_serials, my_serial)
-    #
-    # if leader_serial == my_serial:
-    #     print("I am the leader.")
-    #     setup_ap(my_serial)
-    # else:
-    #     print(f"Connecting to leader: {leader_serial}")
-    #     connect_to_leader(leader_serial)
+
+    leader_serial = elect_leader(remote_serials, my_serial)
+
+    if leader_serial == my_serial:
+        print("I am the leader.")
+        setup_ap(my_serial)
+    else:
+        print(f"Connecting to leader: {leader_serial}")
+        connect_to_leader(leader_serial)
 
 if __name__ == "__main__":
 
