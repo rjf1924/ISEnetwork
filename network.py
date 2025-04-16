@@ -31,7 +31,7 @@ def publish(topic, message):
     _mqtt_pub_queue.put((topic, message))
 
 
-def get_callback(topic):
+def get_callbacks(topic):
     if topic in list(_mqtt_callbacks.keys()):
         return _mqtt_callbacks.get(topic)
     else:
