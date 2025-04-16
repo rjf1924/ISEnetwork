@@ -26,12 +26,12 @@ def elect_leader(remote_serials, my_serial):
 def setup_ap(my_serial):
     ssid = LEADER_SSID_PREFIX + my_serial
     subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot', 'ifname', WIFI_INTERFACE,
-                    'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', 'meshpassword'],
+                    'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', 'ise411'],
                    check=True)
 
 def connect_to_leader(leader_serial):
     ssid = LEADER_SSID_PREFIX + leader_serial
-    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', 'meshpassword'],
+    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', 'ise411'],
                    check=True)
 
 def main():
@@ -43,10 +43,10 @@ def main():
     remote_serials = [extract_serial_from_ssid(ssid) for ssid in seen_ssids]
     print(f"Remote Serials: {remote_serials}")
 
-    # if not remote_serials:
-    #     print("No other mesh nodes found. Becoming leader.")
-    #     setup_ap(my_serial)
-    #     return
+    if not remote_serials:
+        print("No other mesh nodes found. Becoming leader.")
+        setup_ap(my_serial)
+        return
     #
     # leader_serial = elect_leader(remote_serials, my_serial)
     #
