@@ -1,4 +1,6 @@
 from multiprocessing.managers import BaseManager
+import threading
+import socket
 
 
 class SharedManager(BaseManager): pass
@@ -19,22 +21,36 @@ _peer_list = m.get_peer_list()
 
 print("Network Variables Synced to Main Process...")
 
+_local_callback_registry = {}
 
-def subscribe(topic, func):
-    current = _mqtt_callbacks.get(topic, [])
-    current.append(func)
-    _mqtt_callbacks[topic] = current  # reassign whole list
+
+def subscribe(topic, fn):
+    if topic not in _local_callback_registry:
+        _local_callback_registry[topic] = []
+    _local_callback_registry[topic].append(fn)
+
+
+def _listen_forever(sock):
+    while True:
+        try:
+            data = sock.recv(1024).decode()
+            if "|" in data:
+                topic, msg = data.split("|", 1)
+                if topic in _local_callback_registry:
+                    for fn in _local_callback_registry[topic]:
+                        fn(msg)
+        except:
+            break
+
+
+def start_loop():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(("localhost", 60001))
+    threading.Thread(target=_listen_forever, args=(sock,), daemon=True).start()
 
 
 def publish(topic, message):
     _mqtt_pub_queue.put((topic, message))
-
-
-def get_callbacks(topic):
-    if topic in list(_mqtt_callbacks.keys()):
-        return _mqtt_callbacks.get(topic)
-    else:
-        return None
 
 
 def get_peers():

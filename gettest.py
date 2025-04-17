@@ -1,8 +1,13 @@
-import network
 
-
-
-def on_message(msg):
+def on_msg(msg):
     print(f"Recieved: {msg}")
 
-network.subscribe("test", on_message)
+
+if __name__ == '__main__':
+    import network
+
+    network.subscribe("test", on_msg)
+    network.start_loop()
+
+    while True:
+        pass

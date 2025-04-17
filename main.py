@@ -1,6 +1,5 @@
 import socket
 import numpy as np
-import multiprocessing
 from multiprocessing import Process, Queue, Manager
 from multiprocessing.managers import BaseManager
 import paho.mqtt.client as mqtt
@@ -14,7 +13,23 @@ from queue import Empty
 
 def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list, last_heartbeat, mqtt_callbacks):
     print(f"mqtt_listener started...")
-    from network import get_callbacks
+    mqtt_client_sockets = []
+    def broadcast_message(topic, msg):
+        dead = []
+        for s in mqtt_client_sockets:
+            try:
+                s.sendall(f"{topic}|{msg}".encode())
+            except Exception:
+                dead.append(s)
+
+        # Remove any dead sockets
+        for s in dead:
+            mqtt_client_sockets.remove(s)
+            try:
+                s.close()
+            except:
+                pass
+
     def on_message(client, userdata, message):
         # print(f"Client: {client}")
         # print(f"Userdata: {userdata}")
@@ -43,11 +58,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
             last_heartbeat[name] = time.time()
 
         else:
-            handlers = get_callbacks(topic)
-            if handlers is not None:
-                for handle in handlers:
-                    handle(message)
-
+            broadcast_message(topic,msg)
     def on_connect(client, userdata, flags, rc):
         print(f"MQTT Connected with result code {rc}")
         client.subscribe("#")
@@ -68,10 +79,10 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
         def heartbeat_loop():
             while True:
                 client.publish(f"heartbeat/{config['name']}", str(time.time()), retain=True)
-                time.sleep(5)  # heartbeat interval
+                time.sleep(15)  # heartbeat interval
 
         def peer_watchdog():
-            TIMEOUT = 15  # seconds without heartbeat = dead
+            TIMEOUT = 60  # seconds without heartbeat = dead
             while True:
                 now = time.time()
                 dead = [name for name, t in last_heartbeat.items() if now - t > TIMEOUT]
@@ -82,9 +93,20 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
                         del last_heartbeat[name]
                         client.publish(f"status/{name}", "offline", retain=True)
                 time.sleep(5)
+        def mqtt_broadcast_server():
+            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server.bind(("localhost", 60001))
+            server.listen()
+
+            print("[MQTT Broadcast Server] Listening on port 60001")
+            while True:
+                conn, addr = server.accept()
+                print(f"[MQTT subscriber connected] {addr}")
+                mqtt_client_sockets.append(conn)
 
         threading.Thread(target=peer_watchdog, daemon=True).start()
         threading.Thread(target=heartbeat_loop, daemon=True).start()
+        threading.Thread(target=mqtt_broadcast_server, daemon=True).start()
 
         # Handle publish queue
         while True:
@@ -166,7 +188,7 @@ def main():
     print("-" * 10)
 
     manager = Manager()  # Shared instance of callbacks and queues
-    mqtt_callbacks = manager.dict()
+    mqtt_callbacks = []
     mqtt_pub_queue = manager.Queue()
     socket_queue = manager.Queue()
     peer_list = manager.dict()
@@ -178,10 +200,10 @@ def main():
     # --- BaseManager Server Setup ---
     class SharedManager(BaseManager): pass
 
-    SharedManager.register('get_mqtt_callbacks', callable=lambda: mqtt_callbacks)
+    SharedManager.register('get_mqtt_callbacks', callable=lambda: mqtt_callbacks, proxytype=list)
     SharedManager.register('get_mqtt_pub_queue', callable=lambda: mqtt_pub_queue)
     SharedManager.register('get_socket_queue', callable=lambda: socket_queue)
-    SharedManager.register('get_peer_list', callable=lambda: peer_list)
+    SharedManager.register('get_peer_list', callable=lambda: peer_list, proxytype=type(peer_list))
 
     def run_manager_server():
         m = SharedManager(address=('', 50000), authkey=b'sharedsecret')
