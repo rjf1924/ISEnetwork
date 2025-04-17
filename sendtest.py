@@ -2,6 +2,8 @@ import network
 
 import time
 
-while True:
-    network.publish('test', "hello!")
-    time.sleep(5)
+if __name__ == "__main__":
+    while True:
+        print(f"attempting to send...")
+        network.publish('test', "hello!")
+        time.sleep(5)
