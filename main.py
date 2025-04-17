@@ -39,11 +39,11 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
 
         # Handle connect event
         if topic == "connect":
-            name, ip = msg.split()
+            name, ip = msg.split(":")
             if name not in peer_list:
                 print(f"Registered {name} under {ip}")
                 peer_list[name] = ip
-                client.publish("connect", f"{config['name']} {client_ip}")
+                client.publish("connect", f"{config['name']}:{client_ip}")
 
         # Handle status events
         elif topic.startswith("status/"):
@@ -64,7 +64,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
         client.subscribe("#")
         client.subscribe("status/#")
         client.subscribe("heartbeat/#")
-        client.publish("connect", f"{config['name']} {client_ip}")
+        client.publish("connect", f"{config['name']}:{client_ip}")
         client.publish(f"status/{config['name']}", "online", retain=True)
 
     try:
