@@ -14,6 +14,7 @@ from queue import Empty
 def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list, last_heartbeat, mqtt_callbacks):
     print(f"mqtt_listener started...")
     mqtt_client_sockets = []
+
     def broadcast_message(topic, msg):
         dead = []
         for s in mqtt_client_sockets:
@@ -58,7 +59,8 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
             last_heartbeat[name] = time.time()
 
         else:
-            broadcast_message(topic,msg)
+            broadcast_message(topic, msg)
+
     def on_connect(client, userdata, flags, rc):
         print(f"MQTT Connected with result code {rc}")
         client.subscribe("#")
@@ -93,6 +95,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
                         del last_heartbeat[name]
                         client.publish(f"status/{name}", "offline", retain=True)
                 time.sleep(5)
+
         def mqtt_broadcast_server():
             server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server.bind(("localhost", 60001))
@@ -121,10 +124,10 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
         print(e)
 
 
-
 # Socket Setup
 def socket_listener(config, client_ip, server_ip, q):
     print("Socket listener started...")
+
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
         while True:
@@ -156,7 +159,6 @@ def get_server_ip():
     return gws['default'][netifaces.AF_INET][0]
 
 
-
 def get_my_ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -170,6 +172,7 @@ def get_my_ip():
             return netifaces.ifaddresses('wlan0')[netifaces.AF_INET][0]['addr']
         except (KeyError, IndexError):
             return None
+
 
 def get_config():
     with open("config.json", "r") as f:
@@ -215,7 +218,8 @@ def main():
     threading.Thread(target=run_manager_server, daemon=True).start()
 
     # --- Start Proccesses ---
-    mqtt_process = Process(target=mqtt_listener, args=(config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list, last_heartbeat,mqtt_callbacks))
+    mqtt_process = Process(target=mqtt_listener, args=(
+    config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list, last_heartbeat, mqtt_callbacks))
     socket_process = Process(target=socket_listener, args=(config, CLIENT_IP, SERVER_IP, socket_queue))
 
     mqtt_process.start()
@@ -223,6 +227,7 @@ def main():
 
     mqtt_process.join()
     socket_process.join()
+
 
 if __name__ == "__main__":
     main()
