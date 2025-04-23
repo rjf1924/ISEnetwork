@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     network.subscribe("robert/command", on_msg)
 
-    for frame, address in network.get_next_frame():
+    for address, frame in network.get_next_frame():
         # do computation
 
     network.start_loop()
