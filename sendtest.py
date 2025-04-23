@@ -22,4 +22,4 @@ if __name__ == "__main__":
             cv2.waitKey(1)
 
         i += 1
-        time.sleep(5)
+        time.sleep(.5)

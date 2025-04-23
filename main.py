@@ -126,7 +126,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
 
 
 # Socket Setup
-def socket_listener(config, client_ip, server_ip, socket_queue, port=25000):
+def socket_listener(config, client_ip, server_ip, socket_queue):
     print("Socket listener started...")
 
     def handle_client(conn, addr):
@@ -148,10 +148,10 @@ def socket_listener(config, client_ip, server_ip, socket_queue, port=25000):
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind(("0.0.0.0", port))
+    server_socket.bind(("0.0.0.0", 25000))
     server_socket.listen()
 
-    print(f"Socket Listening on port {port}...")
+    print(f"Socket Listening on port {25000}...")
 
     while True:
         conn, addr = server_socket.accept()
