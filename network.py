@@ -43,6 +43,28 @@ def _listen_forever(sock):
             break
 
 
+def get_next_frame():
+    """
+    Yields the next frame in the list of frame in form (addr, data)
+    """
+    while True:
+        try:
+            msg = _socket_queue.get_nowait()
+            addr, data = msg
+            yield (addr, data)
+        except Exception:
+            yield None
+
+def send_frame(addr, frame):
+    """
+    Send a frame over socket to an address.
+    """
+    # TODO: handle it on a seperate thread to avoid backlog
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect(addr, 9000)
+        s.sendall(frame)
+
+
 def start_loop():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("localhost", 60001))
@@ -50,6 +72,9 @@ def start_loop():
 
 
 def publish(topic, message):
+    """
+    Sends a (topic,message) object to the mqtt publish queue
+    """
     _mqtt_pub_queue.put((topic, message))
 
 
@@ -65,5 +90,3 @@ def get_peers():
     return _peer_list
 
 
-def send_data(peer, data):
-    pass

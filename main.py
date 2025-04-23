@@ -119,13 +119,14 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
                 client.publish(topic, message)
             except Empty:
                 continue
+
     except Exception as e:
         print(f"[Error connecting MQTT Listener]")
         print(e)
 
 
 # Socket Setup
-def socket_listener(config, client_ip, server_ip, q):
+def socket_listener(config, client_ip, server_ip, socket_queue, port=25000):
     print("Socket listener started...")
 
     def handle_client(conn, addr):
@@ -134,18 +135,18 @@ def socket_listener(config, client_ip, server_ip, q):
             data = conn.recv(1024)
             if not data:
                 break
-            q.put((2, {addr}, data.decode()))
+            socket_queue.put((str(addr), data.decode()))  # Add to queue
             print(f"[{addr}] {data.decode()}")
-            conn.sendall(b"ACK")
+            # conn.sendall(b"ACK")
         conn.close()
         print(f"[-] Disconnected: {addr}")
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind(("0.0.0.0", 25000))
+    server_socket.bind(("0.0.0.0", port))
     server_socket.listen()
 
-    print("Socket Listening on port 25000...")
+    print(f"Socket Listening on port {port}...")
 
     while True:
         conn, addr = server_socket.accept()
@@ -219,7 +220,7 @@ def main():
 
     # --- Start Proccesses ---
     mqtt_process = Process(target=mqtt_listener, args=(
-    config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list, last_heartbeat, mqtt_callbacks))
+        config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list, last_heartbeat, mqtt_callbacks))
     socket_process = Process(target=socket_listener, args=(config, CLIENT_IP, SERVER_IP, socket_queue))
 
     mqtt_process.start()
