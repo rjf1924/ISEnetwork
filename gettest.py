@@ -14,7 +14,12 @@ if __name__ == '__main__':
         # do computation
         print(address, frame)
         cv2.imshow('test', frame)
-        cv2.waitKey(0)
+        cv2.waitKey(1)
 
     while True:
-        print("Doing nothing")
+        print("Entering forever loop")
+        for address, frame in network.get_next_frame():
+            # do computation
+            print(address, frame)
+            cv2.imshow('test', frame)
+            cv2.waitKey(1)

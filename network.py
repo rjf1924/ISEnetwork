@@ -86,7 +86,7 @@ def send_frame(addr, frame):
     size = len(data)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((addr, 25000))
-        s.sendall(size)
+        s.sendall((size.to_bytes(4, 'big')))
         s.sendall(data)
 
 
