@@ -1,3 +1,4 @@
+import pickle
 from multiprocessing.managers import BaseManager
 import threading
 import socket
@@ -67,20 +68,25 @@ def get_next_frame():
     while True:
         try:
             msg = _socket_queue.get_nowait()
-            addr, data = msg
-            yield addr, data
+            if msg is not None:
+                addr, data = msg
+                yield addr, data
         except Exception:
             yield None
 
 
 def send_frame(addr, frame):
     """
-    Send a frame over socket to an address.
+    Send a frame (numpy or pickelable object) over socket to an address.
     """
     # TODO: handle it on a seperate thread to avoid backlog
+
+    data = pickle.dumps(frame)
+    size = len(data)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect(addr, 9000)
-        s.sendall(frame)
+        s.connect((addr, 25000))
+        s.sendall(size)
+        s.sendall(data)
 
 
 def get_peers():

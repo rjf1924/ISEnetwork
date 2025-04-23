@@ -131,13 +131,18 @@ def socket_listener(config, client_ip, server_ip, socket_queue, port=25000):
 
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
-        while True:
-            data = conn.recv(1024)
-            if not data:
+        size = int.from_bytes(conn.recv(4), 'big')
+        data = b''
+
+        while len(data) < size:
+            packet = conn.recv(4096)
+            if not packet:
                 break
-            socket_queue.put((str(addr), data.decode()))  # Add to queue
-            print(f"[{addr}] {data.decode()}")
-            # conn.sendall(b"ACK")
+            data += packet
+
+        socket_queue.put((str(addr), data))  # Add to queue
+        print(f"[{addr}] {size}")
+
         conn.close()
         print(f"[-] Disconnected: {addr}")
 

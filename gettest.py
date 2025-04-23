@@ -13,7 +13,5 @@ if __name__ == '__main__':
         # do computation
         print(address, frame)
 
-
-
     while True:
-        pass
+        print("Doing nothing")

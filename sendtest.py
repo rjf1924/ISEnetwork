@@ -7,14 +7,15 @@ if __name__ == "__main__":
     i = 0
     while True:
         print(f"attempting to send...")
-        network.publish("test", str(i))
+        network.publish("robert/command", str(i))
 
-        HOST = network.get_peers()[0]  # Get the first peer on the network
-
-        network.send_frame(HOST,b'\x01\x02\x03\x04')
-        PORT = 9000
+        PEERS = dict(network.get_peers())  # Get the first peer on the network
+        print('PEERS: ', PEERS)
 
 
+        if 'Robert' in PEERS:
+            print("Sending frame to....", PEERS['Robert'])
+            network.send_frame(PEERS['Robert'],('HELLO'*2000).encode())
 
         i += 1
         time.sleep(5)
