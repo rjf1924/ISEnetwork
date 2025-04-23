@@ -70,7 +70,8 @@ def get_next_frame():
             msg = _socket_queue.get_nowait()
             if msg is not None:
                 addr, data = msg
-                yield addr, data
+                data_decoded = pickle.loads(data)
+                yield addr, data_decoded
         except Exception:
             yield None
 

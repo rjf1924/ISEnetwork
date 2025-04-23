@@ -13,9 +13,12 @@ if __name__ == "__main__":
         print('PEERS: ', PEERS)
 
 
+
+
         if 'Robert' in PEERS:
+            img = np.random.randint(0, 256, size=(200, 200), dtype=np.uint8)
             print("Sending frame to....", PEERS['Robert'])
-            network.send_frame(PEERS['Robert'],('HELLO'*2000).encode())
+            network.send_frame(PEERS['Robert'],img)
 
         i += 1
         time.sleep(5)
