@@ -10,16 +10,12 @@ if __name__ == '__main__':
     network.subscribe("robert/command", on_msg)
     network.start_loop()
 
-    for address, frame in network.get_next_frame():
-        # do computation
-        print(address, frame)
-        cv2.imshow('test', frame)
-        cv2.waitKey(1)
-
-    while True:
-        print("Entering forever loop")
-        for address, frame in network.get_next_frame():
-            # do computation
+    for data in network.get_next_frame():
+        if data is not None:
+            address, frame = data
             print(address, frame)
             cv2.imshow('test', frame)
             cv2.waitKey(1)
+
+    while True:
+        print("Entering forever loop")
