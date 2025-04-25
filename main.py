@@ -9,7 +9,10 @@ import netifaces
 import json
 import threading
 from queue import Empty
+import signal
+import sys
 
+active_sockets = set()
 
 def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list, last_heartbeat, mqtt_callbacks):
     print(f"mqtt_listener started...")
@@ -77,25 +80,6 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
         client.connect(server_ip, 1883)
 
         client.loop_start()
-
-        # def heartbeat_loop():
-        #     while True:
-        #         client.publish(f"heartbeat/{config['name']}", str(time.time()), retain=True)
-        #         time.sleep(15)  # heartbeat interval
-
-        # def peer_watchdog():
-        #     TIMEOUT = 60  # seconds without heartbeat = dead
-        #     while True:
-        #         now = time.time()
-        #         dead = [name for name, t in last_heartbeat.items() if now - t > TIMEOUT]
-        #         for name in dead:
-        #             if name in peer_list:
-        #                 print(f"[WATCHDOG] Peer {name} silent for too long. Removing.")
-        #                 del peer_list[name]
-        #                 del last_heartbeat[name]
-        #                 client.publish(f"status/{name}", "offline", retain=True)
-        #         time.sleep(5)
-
         def mqtt_broadcast_server():
             server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server.bind(("localhost", 60001))
@@ -106,9 +90,8 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
                 conn, addr = server.accept()
                 print(f"[MQTT subscriber connected] {addr}")
                 mqtt_client_sockets.append(conn)
+                active_sockets.add(conn)
 
-        # threading.Thread(target=peer_watchdog, daemon=True).start()
-        # threading.Thread(target=heartbeat_loop, daemon=True).start()
         threading.Thread(target=mqtt_broadcast_server, daemon=True).start()
 
         # Handle publish queue
@@ -151,7 +134,9 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
             print(f"[!] Error in client handler: {e}")
         finally:
             conn.close()
+            active_sockets.discard(conn)
             print(f"[-] Disconnected: {addr}")
+
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -163,6 +148,7 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
     while True:
         conn, addr = server_socket.accept()
         threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
+        active_sockets.add(conn)
 
 
 def get_server_ip():
@@ -235,11 +221,36 @@ def main():
         config, CLIENT_IP, SERVER_IP, mqtt_pub_queue, peer_list, last_heartbeat, mqtt_callbacks))
     socket_process = Process(target=socket_listener, args=(config, CLIENT_IP, SERVER_IP, socket_queue))
 
+    def graceful_shutdown(signum, frame):
+        print("\n[!] Caught shutdown signal. Cleaning up...")
+
+        for s in list(active_sockets):
+            try:
+                s.close()
+            except Exception as e:
+                print(f"Error closing socket: {e}")
+
+        if mqtt_process.is_alive():
+            mqtt_process.terminate()
+        if socket_process.is_alive():
+            socket_process.terminate()
+
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, graceful_shutdown)  # Ctrl+C
+    signal.signal(signal.SIGTERM, graceful_shutdown)  # kill
+
     mqtt_process.start()
     socket_process.start()
 
     mqtt_process.join()
     socket_process.join()
+
+    for s in list(active_sockets):
+        try:
+            s.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
