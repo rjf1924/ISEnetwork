@@ -78,18 +78,47 @@ def get_next_frame():
 
 def send_frame(addr, frame):
     """
-    Send a frame (numpy or pickelable object) over socket to an address.
+    Send a frame (numpy or pickelable object) over socket to an address in one-go
     """
     # TODO: handle it on a seperate thread to avoid backlog
 
     data = pickle.dumps(frame)
     size = len(data)
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((addr, 25000))
         s.sendall((size.to_bytes(4, 'big')))
         s.sendall(data)
 
+class SocketConnection:
+    """
+    Establish a socket connection between two devices
+    """
+    def __init__(self, addr):
+        self.addr = addr
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((addr, 25000))
+        self.lock = threading.Lock()
 
+    def send(self, frame):
+        try:
+            data = pickle.dumps(frame)
+            size = len(data)
+            with self.lock:
+                self.socket.sendall(size.to_bytes(4, 'big'))
+                self.socket.sendall(data)
+        except Exception as e:
+            print(f"[PersistentSender] Error sending to {self.addr}: {e}")
+            self.close()
+
+    def close(self):
+        try:
+            self.socket.close()
+        except:
+            pass
+
+
+####### PEERS ######
 def get_peers():
     """
     Returns a Peer Dict with:
@@ -99,4 +128,4 @@ def get_peers():
     }
     :return:
     """
-    return _peer_list
+    return dict(_peer_list)
