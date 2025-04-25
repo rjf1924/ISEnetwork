@@ -148,12 +148,12 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
     threading.Thread(target=mqtt_broadcast_server, daemon=True).start()
 
     # Handle publishing last
-    while True:
+    while not shutdown_event.is_set():
         try:
             topic, message = publish_queue.get_nowait()
             client.publish(topic, message)
         except Empty:
-            continue
+            time.sleep(0.01)
 
 
 def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
