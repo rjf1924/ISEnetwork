@@ -272,6 +272,7 @@ import threading
 from queue import Empty
 import signal
 import sys
+import delegator
 
 # --- Global Variables ---
 active_sockets = set()
@@ -527,18 +528,14 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                     raise Exception("[Monitor] Disconnected or wrong network")
             else:
                 print("[Monitor] Checking connection... (Linux)")
-                result = subprocess.run(
-                    ['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    start_new_session=True,
-                    timeout=10
-                )
-                print(f"[Monitor] nmcli return code: {result.returncode}")
-                print(f"[Monitor] nmcli stdout:\n{result.stdout}")
-                print(f"[Monitor] nmcli stderr:\n{result.stderr}")
-                active = [line for line in result.stdout.splitlines() if line.startswith('yes:')]
+                cmd = "nmcli -t -f active,ssid dev wifi"
+                c = delegator.run(cmd)
+
+                print(f"[Monitor] nmcli return code: {c.return_code}")
+                print(f"[Monitor] nmcli stdout:\n{c.out}")
+                print(f"[Monitor] nmcli stderr:\n{c.err}")
+
+                active = [line for line in c.out.splitlines() if line.startswith('yes:')]
                 print(f"[Monitor] Active connection: {active}")
                 if not active or config['LEADER_SSID_PREFIX'] not in active[0]:
                     raise Exception("Disconnected or wrong network")
