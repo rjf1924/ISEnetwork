@@ -131,20 +131,28 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
 
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
-        size = int.from_bytes(conn.recv(4), 'big')
-        data = b''
+        try:
+            while True:
+                size_data = conn.recv(4)
+                if not size_data:
+                    break
+                size = int.from_bytes(size_data, 'big')
 
-        while len(data) < size:
-            packet = conn.recv(4096)
-            if not packet:
-                break
-            data += packet
+                data = b''
+                while len(data) < size:
+                    packet = conn.recv(4096)
+                    if not packet:
+                        break
+                    data += packet
 
-        socket_queue.put((str(addr), data))  # Add to queue
-        print(f"[{addr}] {size}")
-
-        conn.close()
-        print(f"[-] Disconnected: {addr}")
+                if data:
+                    socket_queue.put((str(addr), data))
+                    print(f"[{addr}] {size}")
+        except Exception as e:
+            print(f"[!] Error in client handler: {e}")
+        finally:
+            conn.close()
+            print(f"[-] Disconnected: {addr}")
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

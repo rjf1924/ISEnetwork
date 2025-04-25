@@ -14,6 +14,7 @@ if __name__ == "__main__":
     print('PEERS: ', PEERS)
     i = 0
 
+    print("Starting socket..")
     connection = network.SocketConnection(PEERS['Robert'])
     while True:
         PEERS = network.get_peers()  # Get the first peer on the network
@@ -25,6 +26,7 @@ if __name__ == "__main__":
             cv2.waitKey(1)
         else:
             break
+    print("Closed socket")
     socket.close()
 
     i += 1
