@@ -406,8 +406,9 @@ def graceful_exit(signum, frame, config):
     shutdown_event.set()
     print("[Shutdown] Shutting down network stack...")
     stop_network_stack()
-    print("[Shutdown] Disconnecting AP...")
-    disconnect_ap(config['LAN_INTERFACE'])
+    if platform.system().lower() != "windows":
+        print("[Shutdown] Disconnecting AP...")
+        disconnect_ap(config['LAN_INTERFACE'])
     sys.exit(0)
 
 
