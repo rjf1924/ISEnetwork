@@ -140,7 +140,7 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
 
                 data = b''
                 while len(data) < size:
-                    packet = conn.recv(4096)
+                    packet = conn.recv(min(4096, size - len(data)))
                     if not packet:
                         break
                     data += packet

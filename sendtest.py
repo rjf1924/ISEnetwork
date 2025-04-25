@@ -23,7 +23,8 @@ if __name__ == "__main__":
             print("Sending frame to....", PEERS['Robert'])
             connection.send(img)
             cv2.imshow('test', img)
-            cv2.waitKey(1)
+            cv2.waitKey(0)
+            #time.sleep(0.05)  # ~20 FPS
         else:
             break
     print("Closed socket")
