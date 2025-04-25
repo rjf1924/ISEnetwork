@@ -221,6 +221,10 @@ def clear_active_sockets():
     for s in list(active_sockets):
         if s:
             try:
+                s.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
                 s.close()
             except Exception as e:
                 print(f"[Network Stack] Encountered socket error: {e}")
@@ -234,6 +238,7 @@ def stop_mqtt_process():
         print("[Network Stack] Stopping MQTT Process...")
         mqtt_process.terminate()
         mqtt_process.join()
+    mqtt_process = None
 
 
 def stop_socket_process():
@@ -242,12 +247,19 @@ def stop_socket_process():
         print("[Network Stack] Stopping Socket Process...")
         socket_process.terminate()
         socket_process.join()
+    socket_process = None
+
+
+def stop_manager_server():
+    global manager_server_thread
+    manager_server_thread = None
 
 
 def stop_network_stack():
     clear_active_sockets()
     stop_mqtt_process()
     stop_socket_process()
+    stop_manager_server()
 
 
 def start_mqtt_listener(config, mqtt_pub_queue, peer_list):
@@ -305,9 +317,12 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                     raise Exception("Disconnected or wrong network")
             # Connected to a pi network!
             print(f"[Monitor] Successful connection to the network")
-            if not mqtt_process and not socket_process and not manager_server_thread:
-                print(f"[Monitor] Starting stack")
-                start_network_stack(config, *shared_objs)
+            if mqtt_process and not socket_process:
+                print(f"[Monitor] Trying to reinitialize socket listener")
+                start_socket_listener(config, *shared_objs)
+            if socket_process and not mqtt_process:
+                print(f"[Monitor] Trying to reinitialize mqtt listener")
+                start_mqtt_listener(config, *shared_objs)
         except Exception as e:
             print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
             try:
@@ -315,6 +330,8 @@ def monitor_and_reelect(my_serial, config, shared_objs):
             except Exception as e:
                 print(f"[Monitor] Encountered an issue trying to stop stack: {e}")
                 exit()
+            time.sleep(
+                2)  # Need to let OS take care of things idk (shit breaks if i don't include this for some reason)
             try:
                 if config["can_configure_network"]:
                     seen = scan_wifi(config['LEADER_SSID_PREFIX'])
@@ -331,6 +348,7 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                         print(f"[Monitor] Successfully connected to: {leader_serial}")
 
                     time.sleep(5)
+                    print(f"[Monitor] Starting stack...")
                     start_network_stack(config, *shared_objs)
                 else:
                     print("[Monitor] Please configure network settings... Exiting...")
@@ -377,6 +395,11 @@ def main():
     print(f"[Startup] Starting Monitor...")
     threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=False).start()
 
+    time.sleep(5) # Wait for Wifi to settle
+
+    if not (mqtt_process and mqtt_process.is_alive()) and not (socket_process and socket_process.is_alive()):
+        start_network_stack(config, *shared_objs)
+
     if mqtt_process:
         mqtt_process.join()
     if socket_process:
@@ -384,4 +407,7 @@ def main():
 
 
 if __name__ == "__main__":
+    import multiprocessing
+
+    multiprocessing.freeze_support()
     main()
