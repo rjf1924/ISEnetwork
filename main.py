@@ -593,7 +593,7 @@ def main():
     shared_objs = (mqtt_pub_queue, socket_queue, peer_list)
 
     print(f"[Startup] Starting Monitor...")
-    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=True).start()
+    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=False).start()
 
     signal.signal(signal.SIGINT, lambda s, f: stop_network_stack() or sys.exit(0))
     signal.signal(signal.SIGTERM, lambda s, f: stop_network_stack() or sys.exit(0))
