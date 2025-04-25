@@ -65,6 +65,10 @@ def disconnect_ap(interface):
 
 
 def connect_to_leader(leader_serial, prefix, interface, password):
+    disconnect_ap(interface)
+
+    time.sleep(2)
+
     ssid = prefix + leader_serial
     subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
                     ssid, 'ifname', interface,
@@ -334,9 +338,10 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                     remote_serials = [extract_serial_from_ssid(ssid, config['LEADER_SSID_PREFIX']) for ssid in seen]
                     leader_serial = elect_leader(remote_serials)
                     if not leader_serial or leader_serial == my_serial:
-                        print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
+                        print(f"[Monitor] No other Pi's Found... Becoming Leader")
                         setup_ap(my_serial, config['LEADER_SSID_PREFIX'], config['LAN_INTERFACE'],
                                  config['WIFI_PASSWORD'])
+                        print(f"[Monitor] Successfully became leader")
                     else:
                         print(f"[Monitor] Mesh Leader Found: {leader_serial}")
                         connect_to_leader(leader_serial, config['LEADER_SSID_PREFIX'], config['LAN_INTERFACE'],
