@@ -78,23 +78,23 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
 
         client.loop_start()
 
-        def heartbeat_loop():
-            while True:
-                client.publish(f"heartbeat/{config['name']}", str(time.time()), retain=True)
-                time.sleep(15)  # heartbeat interval
+        # def heartbeat_loop():
+        #     while True:
+        #         client.publish(f"heartbeat/{config['name']}", str(time.time()), retain=True)
+        #         time.sleep(15)  # heartbeat interval
 
-        def peer_watchdog():
-            TIMEOUT = 60  # seconds without heartbeat = dead
-            while True:
-                now = time.time()
-                dead = [name for name, t in last_heartbeat.items() if now - t > TIMEOUT]
-                for name in dead:
-                    if name in peer_list:
-                        print(f"[WATCHDOG] Peer {name} silent for too long. Removing.")
-                        del peer_list[name]
-                        del last_heartbeat[name]
-                        client.publish(f"status/{name}", "offline", retain=True)
-                time.sleep(5)
+        # def peer_watchdog():
+        #     TIMEOUT = 60  # seconds without heartbeat = dead
+        #     while True:
+        #         now = time.time()
+        #         dead = [name for name, t in last_heartbeat.items() if now - t > TIMEOUT]
+        #         for name in dead:
+        #             if name in peer_list:
+        #                 print(f"[WATCHDOG] Peer {name} silent for too long. Removing.")
+        #                 del peer_list[name]
+        #                 del last_heartbeat[name]
+        #                 client.publish(f"status/{name}", "offline", retain=True)
+        #         time.sleep(5)
 
         def mqtt_broadcast_server():
             server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -107,8 +107,8 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
                 print(f"[MQTT subscriber connected] {addr}")
                 mqtt_client_sockets.append(conn)
 
-        threading.Thread(target=peer_watchdog, daemon=True).start()
-        threading.Thread(target=heartbeat_loop, daemon=True).start()
+        # threading.Thread(target=peer_watchdog, daemon=True).start()
+        # threading.Thread(target=heartbeat_loop, daemon=True).start()
         threading.Thread(target=mqtt_broadcast_server, daemon=True).start()
 
         # Handle publish queue
