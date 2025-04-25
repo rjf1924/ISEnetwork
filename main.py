@@ -527,14 +527,12 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                     raise Exception("[Monitor] Disconnected or wrong network")
             else:
                 print("[Monitor] Checking connection... (Linux)")
-                env = os.environ.copy()
-                env['LANG'] = 'C'
                 result = subprocess.run(
                     ['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'],
                     capture_output=True,
                     text=True,
-                    env=env,
                     check=False,
+                    start_new_session=True,
                     timeout=10
                 )
                 print(f"[Monitor] nmcli return code: {result.returncode}")
