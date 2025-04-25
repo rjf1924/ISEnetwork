@@ -32,11 +32,18 @@ example of a command subscriber:
         while True:
             pass
 
-example of a socket publisher (camera data):  TODO   
-example of a socket subscriber (camera data):  TODO   
+
 You can get a list of all peers on the network with
 
     network.get_peers()
+
+Which returns a dictionary of available peers on the network.
+
+known bugs:   
+Sockets get stuck, run   
+sudo fuser -k -n tcp 25000 
+sudo fuser -k -n tcp 50000
+sudo fuser -k -n tcp 60001
 
 
 

@@ -128,7 +128,6 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
 # Socket Setup
 def socket_listener(config, client_ip, server_ip, socket_queue):
     print("Socket listener started...")
-
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
         try:
