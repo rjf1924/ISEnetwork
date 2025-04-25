@@ -42,7 +42,15 @@ read -p "Enter a device name: " devicename
 
 # Save to config.json
 echo "Saving configuration..."
-echo "{\"name\": \"${devicename}\"}" > "$SCRIPT_DIR/config.json"
+cat > "$SCRIPT_DIR/config.json" <<EOF
+{
+  "name": "${devicename}",
+  "LEADER_SSID_PREFIX": "pi-mesh-",
+  "LAN_INTERFACE": "wlan0",
+  "WIFI_PASSWORD": "ise411meshnet",
+  "can_configure_network": true
+}
+EOF
 
 echo "Setup complete. To activate the environment later, run:"
 echo "source $VENV_DIR/bin/activate"
