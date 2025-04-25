@@ -20,6 +20,7 @@ active_sockets = set()
 mqtt_process = None
 socket_process = None
 manager_server_thread = None
+shutdown_event = threading.Event()  # <--- Define shutdown_event inside main
 
 
 # --- WiFi Mesh Functions ---
@@ -57,6 +58,10 @@ def setup_ap(serial, prefix, interface, password):
                     'band', 'bg',
                     'password', password],
                    check=True)
+
+
+def disconnect_ap(interface):
+    subprocess.run(['nmcli', 'dev', 'disconnect', interface], check=True)
 
 
 def connect_to_leader(leader_serial, prefix, interface, password):
@@ -312,6 +317,15 @@ def monitor_and_reelect(my_serial, config, shared_objs):
         time.sleep(30)
 
 
+def graceful_exit(signum, frame, config):
+    print("[Shutdown] Shutdown signal received. Exiting...")
+    shutdown_event.set()  # <--- Signal monitor thread to exit
+
+    stop_network_stack()
+    disconnect_ap(config['LAN_INTERFACE'])
+    sys.exit(0)
+
+
 def main():
     config = get_config()
     my_serial = get_serial()
@@ -332,17 +346,9 @@ def main():
 
     shared_objs = (mqtt_pub_queue, socket_queue, peer_list)
 
-    shutdown_event = threading.Event()  # <--- Define shutdown_event inside main
-
-    def graceful_exit(signum, frame):
-        print("[Shutdown] Shutdown signal received. Exiting...")
-        shutdown_event.set()  # <--- Signal monitor thread to exit
-        stop_network_stack()
-        sys.exit(0)
-
     # Setup signal handlers
-    signal.signal(signal.SIGINT, graceful_exit)
-    signal.signal(signal.SIGTERM, graceful_exit)
+    signal.signal(signal.SIGINT, lambda s, f: graceful_exit(s, f, config))
+    signal.signal(signal.SIGTERM, lambda s, f: graceful_exit(s, f, config))
 
     print(f"[Startup] Starting Monitor...")
     threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=False).start()
