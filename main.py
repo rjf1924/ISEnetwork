@@ -1,7 +1,7 @@
 import socket
 import numpy as np
 import os
-from multiprocessing import Process, Queue, Manager
+from multiprocessing import Process, Queue, Manager, Event
 from multiprocessing.managers import BaseManager
 import paho.mqtt.client as mqtt
 import queue
@@ -22,7 +22,7 @@ active_sockets = set()
 mqtt_process = None
 socket_process = None
 manager_server_thread = None
-shutdown_event = threading.Event()  # <--- Define shutdown_event inside main
+shutdown_event = Event()  # <--- Define shutdown_event inside main
 
 
 # --- WiFi Mesh Functions ---
@@ -451,6 +451,5 @@ def main():
 
 if __name__ == "__main__":
     import multiprocessing
-
     multiprocessing.freeze_support()
     main()
