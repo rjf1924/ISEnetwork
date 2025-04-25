@@ -340,7 +340,7 @@ def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
     start_socket_listener(config, socket_queue, peer_list)
 
 
-def monitor_and_reelect(my_serial, config, shared_objs):
+def monitor_and_reelect(my_serial, config, shared_objs, restart_event):
     while not shutdown_event.is_set():
         try:
             if platform.system().lower() == "windows":
@@ -372,12 +372,14 @@ def monitor_and_reelect(my_serial, config, shared_objs):
             try:
                 print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
                 stop_network_stack()
-                time.sleep(2)  # Need to let OS take care of things idk
+                time.sleep(5)  # Need to let OS take care of things idk
 
                 if config["can_configure_network"]:
+
                     seen = scan_wifi(config['LEADER_SSID_PREFIX'])
                     remote_serials = [extract_serial_from_ssid(ssid, config['LEADER_SSID_PREFIX']) for ssid in seen]
                     leader_serial = elect_leader(remote_serials)
+
                     if not leader_serial or leader_serial == my_serial:
                         print(f"[Monitor] No other Pi's Found... Becoming Leader")
                         setup_ap(my_serial, config['LEADER_SSID_PREFIX'], config['LAN_INTERFACE'],
@@ -391,7 +393,8 @@ def monitor_and_reelect(my_serial, config, shared_objs):
 
                     time.sleep(5)
                     print(f"[Monitor] Starting stack...")
-                    start_network_stack(config, *shared_objs)
+                    restart_event.set()
+                    #start_network_stack(config, *shared_objs)
                 else:
                     print("[Monitor] Please configure network settings... Exiting...")
                     exit()
@@ -430,18 +433,21 @@ def main():
 
     shared_objs = (mqtt_pub_queue, socket_queue, peer_list)
 
+    # Setup restart event (for when you need to stop the network and then re-start)
+    restart_event = threading.Event()
+
     # Setup signal handlers
     signal.signal(signal.SIGINT, lambda s, f: graceful_exit(s, f, config))
     signal.signal(signal.SIGTERM, lambda s, f: graceful_exit(s, f, config))
 
     print(f"[Startup] Starting Monitor...")
-    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=False).start()
+    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs, restart_event), daemon=False).start()
 
-    time.sleep(15)  # Wait for Wifi to settle
-
-    if not (mqtt_process and mqtt_process.is_alive()) and not (socket_process and socket_process.is_alive()):
-        start_network_stack(config, *shared_objs)
-        # This is required by windows since threads must be accessible through main
+    while not shutdown_event.is_set():
+        if restart_event.is_set():
+            start_network_stack(config, *shared_objs)
+            restart_event.clear()
+        time.sleep(1)
 
     if mqtt_process:
         mqtt_process.join()
