@@ -89,7 +89,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         Sends the topic and message across internal sockets to all network libraries
         """
         dead = []
-        print(f"[MQTT]{topic}|{msg}")
+
         for s in mqtt_client_sockets:
             try:
                 s.sendall(f"{topic}|{msg}".encode())
@@ -105,6 +105,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
     def on_message(client, userdata, message):
         msg = message.payload.decode()
         topic = message.topic
+        print(f"[MQTT]{topic}|{msg}")
         # Handle MQTT Server Commands
         if topic == "connect":
             name, ip = msg.split(":")
@@ -340,7 +341,7 @@ def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
     start_socket_listener(config, socket_queue, peer_list)
 
 
-def monitor_and_reelect(my_serial, config, shared_objs, restart_event):
+def monitor_and_reelect(my_serial, config, shared_objs, start_event):
     while not shutdown_event.is_set():
         try:
             if platform.system().lower() == "windows":
@@ -362,12 +363,9 @@ def monitor_and_reelect(my_serial, config, shared_objs, restart_event):
             print(f"[Monitor] Successful connection to the network")
             print(f"[Monitor] MQTT listener status: {mqtt_process}")
             print(f"[Monitor] Socket Listener status: {socket_process}")
-            if mqtt_process and not socket_process:
-                print(f"[Monitor] Trying to reinitialize socket listener")
-                start_socket_listener(config, *shared_objs)
-            if socket_process and not mqtt_process:
-                print(f"[Monitor] Trying to reinitialize mqtt listener")
-                start_mqtt_listener(config, *shared_objs)
+            if not mqtt_process and not socket_process:
+                print(f"[Monitor] Network stack offline... Starting stack")
+                start_event.set()
         except Exception as e:
             try:
                 print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
@@ -393,7 +391,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, restart_event):
 
                     time.sleep(5)
                     print(f"[Monitor] Starting stack...")
-                    restart_event.set()
+                    start_event.set()
                     #start_network_stack(config, *shared_objs)
                 else:
                     print("[Monitor] Please configure network settings... Exiting...")
@@ -433,20 +431,20 @@ def main():
 
     shared_objs = (mqtt_pub_queue, socket_queue, peer_list)
 
-    # Setup restart event (for when you need to stop the network and then re-start)
-    restart_event = threading.Event()
+    # Setup restart event (for when i want to start network from main)
+    start_event = threading.Event()
 
     # Setup signal handlers
     signal.signal(signal.SIGINT, lambda s, f: graceful_exit(s, f, config))
     signal.signal(signal.SIGTERM, lambda s, f: graceful_exit(s, f, config))
 
     print(f"[Startup] Starting Monitor...")
-    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs, restart_event), daemon=False).start()
+    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs, start_event), daemon=False).start()
 
     while not shutdown_event.is_set():
-        if restart_event.is_set():
+        if start_event.is_set():
             start_network_stack(config, *shared_objs)
-            restart_event.clear()
+            start_event.clear()
         time.sleep(1)
 
     if mqtt_process:
