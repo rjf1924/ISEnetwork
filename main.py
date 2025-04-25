@@ -15,6 +15,7 @@ from queue import Empty
 import signal
 import sys
 import delegator
+import select
 
 # --- Global Variables ---
 active_sockets = set()
@@ -158,6 +159,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
 def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
     def handle_client(conn, addr):
         print(f"[Socket] Connected to {addr}")
         active_sockets.add(conn)
@@ -196,10 +198,23 @@ def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(("0.0.0.0", 25000))
     server_socket.listen()
+    server_socket.setblocking(False)
 
-    while True:
-        conn, addr = server_socket.accept()
-        threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
+    print("[Socket Listener] Started.")
+
+    try:
+        while not shutdown_event.is_set():
+            readable, _, _ = select.select([server_socket], [], [], 1.0)
+            if server_socket in readable:
+                conn, addr = server_socket.accept()
+                threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
+
+    except Exception as e:
+        print(f"[Socket Listener] Error: {e}")
+
+    # while True:
+    #     conn, addr = server_socket.accept()
+    #     threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
 
 
 # --- Shared Manager Setup ---
@@ -339,6 +354,8 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                     raise Exception("Disconnected or wrong network")
             # Connected to a pi network!
             print(f"[Monitor] Successful connection to the network")
+            print(f"[Monitor] MQTT listener status: {mqtt_process}")
+            print(f"[Monitor] Socket Listener status: {socket_process}")
             if mqtt_process and not socket_process:
                 print(f"[Monitor] Trying to reinitialize socket listener")
                 start_socket_listener(config, *shared_objs)
@@ -414,7 +431,7 @@ def main():
     print(f"[Startup] Starting Monitor...")
     threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=False).start()
 
-    time.sleep(15) # Wait for Wifi to settle
+    time.sleep(15)  # Wait for Wifi to settle
 
     if not (mqtt_process and mqtt_process.is_alive()) and not (socket_process and socket_process.is_alive()):
         start_network_stack(config, *shared_objs)
