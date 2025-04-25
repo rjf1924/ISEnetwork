@@ -79,6 +79,8 @@ def connect_to_leader(leader_serial, prefix, interface, password):
 
 # --- MQTT and Socket Infrastructure ---
 def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     mqtt_client_sockets = []
 
     def broadcast_message(topic, msg):
@@ -154,6 +156,8 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
 
 
 def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     def handle_client(conn, addr):
         print(f"[Socket] Connected to {addr}")
         active_sockets.add(conn)
