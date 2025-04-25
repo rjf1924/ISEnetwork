@@ -526,7 +526,10 @@ def monitor_and_reelect(my_serial, config, shared_objs):
             else:
                 print(f"[Monitor] Checking connection...(L)")
                 result = subprocess.run(['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'], capture_output=True,
-                                        text=True)
+                                        text=True, check=False)
+                print(f"[Monitor] nmcli return code: {result.returncode}")
+                print(f"[Monitor] nmcli stdout: {result.stdout}")
+                print(f"[Monitor] nmcli stderr: {result.stderr}")
                 active = [line for line in result.stdout.split('\n') if line.startswith('yes:')]
                 print(f"[Monitor] Active connection...(L): {active}")
                 if not active or config['LEADER_SSID_PREFIX'] not in active[0]:
