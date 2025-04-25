@@ -281,7 +281,7 @@ manager_server_thread = None
 
 # --- WiFi Mesh Functions ---
 def get_serial():
-    if platform.system().lower() is not "windows":
+    if platform.system().lower() != "windows":
         with open('/proc/cpuinfo') as f:
             for line in f:
                 if line.startswith('Serial'):
