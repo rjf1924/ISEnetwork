@@ -586,8 +586,10 @@ def main():
     signal.signal(signal.SIGINT, lambda s, f: stop_network_stack() or sys.exit(0))
     signal.signal(signal.SIGTERM, lambda s, f: stop_network_stack() or sys.exit(0))
 
-    mqtt_process.join()
-    socket_process.join()
+    if mqtt_process:
+        mqtt_process.join()
+    if socket_process:
+        socket_process.join()
 
 
 if __name__ == "__main__":
