@@ -166,36 +166,36 @@ def socket_listener(config, client_ip, server_ip, socket_queue, peer_list, shutd
 
     def handle_client(conn, addr):
         print(f"[Socket] Connected to {addr}")
-        active_sockets.add(conn)
         try:
-            while True:
-                size_data = conn.recv(4)
-                if not size_data:
-                    break
-                size = int.from_bytes(size_data, 'big')
-                data = b''
-                while len(data) < size:
-                    packet = conn.recv(min(4096, size - len(data)))
-                    if not packet:
-                        break
-                    data += packet
+            active_sockets.add(conn)
+            recv_buffer = bytearray()
 
-                if data:
+            while True:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                recv_buffer.extend(chunk)
+
+                while len(recv_buffer) >= 4:
+                    size = int.from_bytes(recv_buffer[:4], 'big')
+                    if len(recv_buffer) < 4 + size:
+                        break
+                    data = recv_buffer[4:4 + size]
                     try:
                         socket_queue.put_nowait((str(addr), data))
                     except queue.Full:
                         try:
-                            socket_queue.get_nowait()  # Discard oldest
+                            socket_queue.get_nowait()
                         except queue.Empty:
                             pass
                         socket_queue.put_nowait((str(addr), data))
+                    recv_buffer = recv_buffer[4 + size:]
 
         except Exception as e:
-            print(f"[Socket] Error in handle_client: {e}")
-
+            print(f"[Socket] Error: {e}")
         finally:
-            conn.close()
             active_sockets.discard(conn)
+            conn.close()
             print(f"[Socket] Disconnected from {addr}")
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -422,7 +422,7 @@ def main():
 
     manager = Manager()
     mqtt_pub_queue = manager.Queue()
-    socket_queue = manager.Queue(maxsize=3)
+    socket_queue = manager.Queue(maxsize=10)
     peer_list = manager.dict()
     peer_list[config['name']] = get_my_ip()
 
