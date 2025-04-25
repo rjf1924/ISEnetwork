@@ -2,7 +2,7 @@ import subprocess
 import time
 
 LEADER_SSID_PREFIX = "pi-mesh-"
-LAN_INTERFACE = "wlan1"
+LAN_INTERFACE = "wlan0"
 WIFI_PASSWORD = 'ise411meshnet'
 def get_serial():
     with open('/proc/cpuinfo') as f:
@@ -58,11 +58,19 @@ def main():
 
     if not leader_serial:
         print("No other mesh nodes found. Becoming leader.")
-        setup_ap(my_serial)
-        print("Successfully became leader...")
+        try:
+            setup_ap(my_serial)
+            print("Successfully became leader...")
+        except Exception as e:
+            print("Error Becoming leader:  ", e)
+            return
     else:
         print(f"Connecting to leader: {leader_serial}")
-        connect_to_leader(leader_serial)
+        try:
+            connect_to_leader(leader_serial)
+        except Exception as e:
+            print('Error connecting to leader: ', e)
+            return
 
 if __name__ == "__main__":
     main()
