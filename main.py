@@ -116,6 +116,7 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
 
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
+        active_sockets.add(conn)
         try:
             while True:
                 size_data = conn.recv(4)
@@ -150,7 +151,7 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
     while True:
         conn, addr = server_socket.accept()
         threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
-        active_sockets.add(conn)
+
 
 
 def get_server_ip():
@@ -227,15 +228,18 @@ def main():
         print("\n[!] Caught shutdown signal. Cleaning up...")
 
         for s in list(active_sockets):
-            try:
-                s.close()
-            except Exception as e:
-                print(f"Error closing socket: {e}")
+            if s:
+                try:
+                    s.close()
+                except Exception:
+                    pass
 
         if mqtt_process.is_alive():
             mqtt_process.terminate()
+            mqtt_process.join()
         if socket_process.is_alive():
             socket_process.terminate()
+            socket_process.join()
 
         sys.exit(0)
 
