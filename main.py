@@ -105,7 +105,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
         msg = message.payload.decode()
         topic = message.topic
         # Handle MQTT Server Commands
-        print(f"[MQTT] {message}")
+        print(f"[MQTT] {msg}")
         if topic == "connect":
             name, ip = msg.split(":")
             if name not in peer_list:
@@ -155,6 +155,9 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
         except Empty:
             time.sleep(0.01)
 
+    client.loop_stop()
+    client.disconnect()
+    print("[MQTT Listener] Exiting...")
 
 def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -212,6 +215,9 @@ def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
     except Exception as e:
         print(f"[Socket Listener] Error: {e}")
 
+    finally:
+        server_socket.close()
+        print("[Socket Listener] Exiting...")
     # while True:
     #     conn, addr = server_socket.accept()
     #     threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
