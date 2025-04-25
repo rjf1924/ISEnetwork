@@ -396,7 +396,7 @@ def main():
     print(f"[Startup] Starting Monitor...")
     threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs), daemon=False).start()
 
-    time.sleep(5) # Wait for Wifi to settle
+    time.sleep(15) # Wait for Wifi to settle
 
     if not (mqtt_process and mqtt_process.is_alive()) and not (socket_process and socket_process.is_alive()):
         start_network_stack(config, *shared_objs)
