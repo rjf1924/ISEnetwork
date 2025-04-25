@@ -4,6 +4,7 @@ import os
 from multiprocessing import Process, Queue, Manager
 from multiprocessing.managers import BaseManager
 import paho.mqtt.client as mqtt
+import queue
 import time
 import platform
 import subprocess
@@ -101,6 +102,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
         msg = message.payload.decode()
         topic = message.topic
         # Handle MQTT Server Commands
+        print(f"[MQTT] {message}")
         if topic == "connect":
             name, ip = msg.split(":")
             if name not in peer_list:
@@ -153,6 +155,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
 
 def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
     def handle_client(conn, addr):
+        print(f"[Socket] Connected to {addr}")
         active_sockets.add(conn)
         try:
             while True:
@@ -166,13 +169,24 @@ def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
                     if not packet:
                         break
                     data += packet
+
                 if data:
-                    socket_queue.put((str(addr), data))
+                    try:
+                        socket_queue.put_nowait((str(addr), data))
+                    except queue.Full:
+                        try:
+                            socket_queue.get_nowait()  # Discard oldest
+                        except queue.Empty:
+                            pass
+                        socket_queue.put_nowait((str(addr), data))
+
         except Exception as e:
-            pass
+            print(f"[Socket] Error in handle_client: {e}")
+
         finally:
             conn.close()
             active_sockets.discard(conn)
+            print(f"[Socket] Disconnected from {addr}")
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -379,7 +393,7 @@ def main():
 
     manager = Manager()
     mqtt_pub_queue = manager.Queue()
-    socket_queue = manager.Queue()
+    socket_queue = manager.Queue(maxsize=3)
     peer_list = manager.dict()
     peer_list[config['name']] = get_my_ip()
 
