@@ -259,6 +259,7 @@
 
 import socket
 import numpy as np
+import os
 from multiprocessing import Process, Queue, Manager
 from multiprocessing.managers import BaseManager
 import paho.mqtt.client as mqtt
@@ -525,16 +526,23 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                 if "connected" not in result.stdout.lower() or not ssid_ok:
                     raise Exception("[Monitor] Disconnected or wrong network")
             else:
-                print(f"[Monitor] Checking connection...(Linux)")
-                result = subprocess.run(['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'], capture_output=True,
-                                        text=True, check=False)
+                print("[Monitor] Checking connection... (Linux)")
+                env = dict(**os.environ, LANG='C')
+                result = subprocess.run(
+                    ['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    check=False,
+                    timeout=10
+                )
                 print(f"[Monitor] nmcli return code: {result.returncode}")
-                print(f"[Monitor] nmcli stdout: {result.stdout}")
-                print(f"[Monitor] nmcli stderr: {result.stderr}")
-                active = [line for line in result.stdout.split('\n') if line.startswith('yes:')]
-                print(f"[Monitor] Active connection...(L): {active}")
+                print(f"[Monitor] nmcli stdout:\n{result.stdout}")
+                print(f"[Monitor] nmcli stderr:\n{result.stderr}")
+                active = [line for line in result.stdout.splitlines() if line.startswith('yes:')]
+                print(f"[Monitor] Active connection: {active}")
                 if not active or config['LEADER_SSID_PREFIX'] not in active[0]:
-                    raise Exception("[Monitor] Disconnected or wrong network")
+                    raise Exception("Disconnected or wrong network")
         except Exception as e:
             print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
             try:
