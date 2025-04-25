@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
 
     print(f"attempting to send...")
-    #network.publish("robert/command", str(i))
+    network.publish("robert/command", str(i))
 
     PEERS = network.get_peers()  # Get the first peer on the network
     print('PEERS: ', PEERS)

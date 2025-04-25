@@ -147,7 +147,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
             continue
 
 
-def socket_listener(config, client_ip, server_ip, socket_queue):
+def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
     def handle_client(conn, addr):
         active_sockets.add(conn)
         try:
@@ -215,10 +215,8 @@ def get_config():
 
 
 # --- NETWORK STACK ---
-def stop_network_stack():
-    global mqtt_process, socket_process
 
-    print("[Network Stack] Stopping...")
+def clear_active_sockets():
     print("[Network Stack] Clearing sockets...")
     for s in list(active_sockets):
         if s:
@@ -229,37 +227,62 @@ def stop_network_stack():
     active_sockets.clear()
     print("[Network Stack] Clearing sockets... Done")
 
+
+def stop_mqtt_process():
+    global mqtt_process
     if mqtt_process and mqtt_process.is_alive():
         print("[Network Stack] Stopping MQTT Process...")
         mqtt_process.terminate()
         mqtt_process.join()
+
+
+def stop_socket_process():
+    global socket_process
     if socket_process and socket_process.is_alive():
         print("[Network Stack] Stopping Socket Process...")
         socket_process.terminate()
         socket_process.join()
 
 
-def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
-    global mqtt_process, socket_process, manager_server_thread
+def stop_network_stack():
+    clear_active_sockets()
+    stop_mqtt_process()
+    stop_socket_process()
 
-    print("[Network Stack] Starting...")
+
+def start_mqtt_listener(config, mqtt_pub_queue, peer_list):
+    global mqtt_process
+    print("[Network Stack] Starting MQTT Listener...")
+    mqtt_process = Process(target=mqtt_listener,
+                           args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list))
+    mqtt_process.start()
+
+
+def start_socket_listener(config, socket_queue, peer_list):
+    global socket_process
+    print("[Network Stack] Starting Socket Listener...")
+    socket_process = Process(target=socket_listener,
+                             args=(config, get_my_ip(), get_server_ip(), socket_queue, peer_list))
+    socket_process.start()
+
+
+def start_manager_server():
+    global manager_server_thread
+    print("[Network Stack] Starting Shared Variables...")
 
     def run_manager_server():
         m = SharedManager(address=('', 50000), authkey=b'sharedsecret')
         server = m.get_server()
         server.serve_forever()
 
-    print("[Network Stack] Starting Shared Variables...")
     manager_server_thread = threading.Thread(target=run_manager_server, daemon=True)
     manager_server_thread.start()
 
-    print("[Network Stack] Starting MQTT Listener...")
-    mqtt_process = Process(target=mqtt_listener, args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list))
-    mqtt_process.start()
 
-    print("[Network Stack] Starting Socket Listener...")
-    socket_process = Process(target=socket_listener, args=(config, get_my_ip(), get_server_ip(), socket_queue))
-    socket_process.start()
+def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
+    start_manager_server()
+    start_mqtt_listener(config, mqtt_pub_queue, peer_list)
+    start_socket_listener(config, socket_queue, peer_list)
 
 
 def monitor_and_reelect(my_serial, config, shared_objs):
@@ -282,8 +305,8 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                     raise Exception("Disconnected or wrong network")
             # Connected to a pi network!
             print(f"[Monitor] Successful connection to the network")
-            if not mqtt_process and not socket_process:
-                print(f"[Monitor] No processes running... Starting stack")
+            if not mqtt_process and not socket_process and not manager_server_thread:
+                print(f"[Monitor] Starting stack")
                 start_network_stack(config, *shared_objs)
         except Exception as e:
             print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
