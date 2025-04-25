@@ -279,7 +279,7 @@ def stop_mqtt_process():
     global mqtt_process
     if mqtt_process and mqtt_process.is_alive():
         print("[Network Stack] Stopping MQTT Process...")
-        #mqtt_process.terminate()
+        mqtt_process.terminate()
         mqtt_process.join()
     mqtt_process = None
 
@@ -288,7 +288,7 @@ def stop_socket_process():
     global socket_process
     if socket_process and socket_process.is_alive():
         print("[Network Stack] Stopping Socket Process...")
-        #socket_process.terminate()
+        socket_process.terminate()
         socket_process.join()
     socket_process = None
 
