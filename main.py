@@ -14,6 +14,7 @@ import sys
 
 active_sockets = set()
 
+
 def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list, last_heartbeat, mqtt_callbacks):
     print(f"mqtt_listener started...")
     mqtt_client_sockets = []
@@ -80,6 +81,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
         client.connect(server_ip, 1883)
 
         client.loop_start()
+
         def mqtt_broadcast_server():
             server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server.bind(("localhost", 60001))
@@ -111,6 +113,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue: Queue, peer_list,
 # Socket Setup
 def socket_listener(config, client_ip, server_ip, socket_queue):
     print("Socket listener started...")
+
     def handle_client(conn, addr):
         print(f"[+] Connected: {addr}")
         try:
@@ -136,7 +139,6 @@ def socket_listener(config, client_ip, server_ip, socket_queue):
             conn.close()
             active_sockets.discard(conn)
             print(f"[-] Disconnected: {addr}")
-
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

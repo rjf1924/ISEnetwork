@@ -1,4 +1,5 @@
 import cv2
+from camerautils import  decode_image
 def on_msg(msg):
     print(f"Recieved: {msg}")
 
@@ -14,7 +15,8 @@ if __name__ == '__main__':
         if data is not None:
             address, frame = data
             print(address, frame)
-            cv2.imshow('test', frame)
+            img = decode_image(frame)
+            cv2.imshow('test', img)
             cv2.waitKey(1)
 
     while True:
