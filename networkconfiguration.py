@@ -19,9 +19,12 @@ def scan_wifi():
 def extract_serial_from_ssid(ssid):
     return ssid[len(LEADER_SSID_PREFIX):]
 
-def elect_leader(remote_serials, my_serial):
-    all_serials = remote_serials + [my_serial]
-    return max(all_serials)
+def elect_leader(remote_serials):
+    all_serials = remote_serials
+    if all_serials:
+        return max(all_serials)
+    else:
+        return None
 
 def setup_ap(my_serial):
     ssid = LEADER_SSID_PREFIX + my_serial
@@ -47,21 +50,15 @@ def main():
     remote_serials = [extract_serial_from_ssid(ssid) for ssid in seen_ssids]
     print(f"Remote Serials: {remote_serials}")
 
-    if not remote_serials:
+    leader_serial = elect_leader(remote_serials)
+
+    if not leader_serial:
         print("No other mesh nodes found. Becoming leader.")
         setup_ap(my_serial)
         print("Successfully became leader...")
-        return
-
-    leader_serial = elect_leader(remote_serials, my_serial)
-
-    if leader_serial == my_serial:
-        print("I am the leader.")
-        setup_ap(my_serial)
     else:
         print(f"Connecting to leader: {leader_serial}")
         connect_to_leader(leader_serial)
 
 if __name__ == "__main__":
-
     main()
