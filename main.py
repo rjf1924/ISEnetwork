@@ -517,14 +517,14 @@ def monitor_and_reelect(my_serial, config, shared_objs):
     while True:
         try:
             if platform.system().lower() == "windows":
-                print(f"[Monitor] Checking connection...(W)")
+                print(f"[Monitor] Checking connection...(Windows)")
                 result = subprocess.run(['netsh', 'wlan', 'show', 'interfaces'], capture_output=True, text=True)
                 ssid_ok = any(config['LEADER_SSID_PREFIX'] in line for line in result.stdout.splitlines() if
                               "SSID" in line and "BSSID" not in line)
                 if "connected" not in result.stdout.lower() or not ssid_ok:
                     raise Exception("[Monitor] Disconnected or wrong network")
             else:
-                print(f"[Monitor] Checking connection...(L)")
+                print(f"[Monitor] Checking connection...(Linux)")
                 result = subprocess.run(['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'], capture_output=True,
                                         text=True, check=False)
                 print(f"[Monitor] nmcli return code: {result.returncode}")
