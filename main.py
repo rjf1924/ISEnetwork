@@ -402,7 +402,7 @@ def monitor_and_reelect(my_serial, config, shared_objs):
 
 def graceful_exit(signum, frame, config):
     print("[Shutdown] Shutdown signal received. Exiting...")
-    shutdown_event.set()  # <--- Signal monitor thread to exit
+    shutdown_event.set()
     print("[Shutdown] Shutting down network stack...")
     stop_network_stack()
     print("[Shutdown] Disconnecting AP...")
