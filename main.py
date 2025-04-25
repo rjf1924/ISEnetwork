@@ -125,7 +125,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         client.publish("connect", f"{config['name']}:{client_ip}")
         client.publish(f"status/{config['name']}", "online", retain=True)
 
-    client = mqtt.Client()
+    client = mqtt.Client(protocol=mqtt.MQTTv311)
     client.on_message = on_message
     client.on_connect = on_connect
     client.will_set(f"status/{config['name']}", payload="offline", qos=1, retain=True)
