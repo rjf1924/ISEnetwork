@@ -79,7 +79,7 @@ def connect_to_leader(leader_serial, prefix, interface, password):
 
 
 # --- MQTT and Socket Infrastructure ---
-def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
+def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdown_event):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     mqtt_client_sockets = []
@@ -89,6 +89,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
         Sends the topic and message across internal sockets to all network libraries
         """
         dead = []
+        print(f"[MQTT]{topic}|{msg}")
         for s in mqtt_client_sockets:
             try:
                 s.sendall(f"{topic}|{msg}".encode())
@@ -105,7 +106,6 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
         msg = message.payload.decode()
         topic = message.topic
         # Handle MQTT Server Commands
-        print(f"[MQTT] {msg}")
         if topic == "connect":
             name, ip = msg.split(":")
             if name not in peer_list:
@@ -159,7 +159,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list):
     client.disconnect()
     print("[MQTT Listener] Exiting...")
 
-def socket_listener(config, client_ip, server_ip, socket_queue, peer_list):
+def socket_listener(config, client_ip, server_ip, socket_queue, peer_list, shutdown_event):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
@@ -309,7 +309,7 @@ def start_mqtt_listener(config, mqtt_pub_queue, peer_list):
     global mqtt_process
     print("[Network Stack] Starting MQTT Listener...")
     mqtt_process = Process(target=mqtt_listener,
-                           args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list))
+                           args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list, shutdown_event))
     mqtt_process.start()
 
 
@@ -317,7 +317,7 @@ def start_socket_listener(config, socket_queue, peer_list):
     global socket_process
     print("[Network Stack] Starting Socket Listener...")
     socket_process = Process(target=socket_listener,
-                             args=(config, get_my_ip(), get_server_ip(), socket_queue, peer_list))
+                             args=(config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_event))
     socket_process.start()
 
 
