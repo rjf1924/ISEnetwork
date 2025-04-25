@@ -2,7 +2,7 @@ import subprocess
 import time
 
 LEADER_SSID_PREFIX = "pi-mesh-"
-WIFI_INTERFACE = "wlan0"
+LAN_INTERFACE = "wlan1"
 WIFI_PASSWORD = 'ise411meshnet'
 def get_serial():
     with open('/proc/cpuinfo') as f:
@@ -29,18 +29,22 @@ def elect_leader(remote_serials):
 def setup_ap(my_serial):
     ssid = LEADER_SSID_PREFIX + my_serial
     try:
-        subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot', 'ifname', WIFI_INTERFACE,
-                        'con-name', ssid, 'ssid', ssid, 'band', 'bg', 'password', WIFI_PASSWORD],
+        subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot',
+                        'ifname', LAN_INTERFACE,
+                        'con-name', ssid,
+                        'ssid', ssid,
+                        'band', 'bg',
+                        'password', WIFI_PASSWORD],
                        check=True)
     except Exception as error:
         print("Failed")
         print(error)
-
 def connect_to_leader(leader_serial):
     ssid = LEADER_SSID_PREFIX + leader_serial
-    subprocess.run(['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', WIFI_PASSWORD],
+    subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
+                    ssid, 'ifname', LAN_INTERFACE,
+                    'password', WIFI_PASSWORD],
                    check=True)
-
 def main():
     my_serial = get_serial()
     print(f"My serial: {my_serial}")
