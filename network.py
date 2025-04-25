@@ -90,10 +90,12 @@ def send_frame(addr, frame):
         s.sendall((size.to_bytes(4, 'big')))
         s.sendall(data)
 
+
 class SocketConnection:
     """
     Establish a socket connection between two devices
     """
+
     def __init__(self, addr):
         self.addr = addr
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
