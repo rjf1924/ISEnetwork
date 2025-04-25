@@ -400,6 +400,7 @@ def main():
 
     if not (mqtt_process and mqtt_process.is_alive()) and not (socket_process and socket_process.is_alive()):
         start_network_stack(config, *shared_objs)
+        # This is required by windows since threads must be accessible through main
 
     if mqtt_process:
         mqtt_process.join()

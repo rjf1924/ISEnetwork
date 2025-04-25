@@ -14,7 +14,7 @@ if __name__ == '__main__':
     for data in network.get_next_frame():
         if data is not None:
             address, frame = data
-            print(address, frame)
+            #print(address, frame)
             img = decode_image(frame)
             cv2.imshow('test', img)
             cv2.waitKey(1)
