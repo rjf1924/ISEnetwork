@@ -536,7 +536,7 @@ def monitor_and_reelect(my_serial, config, shared_objs):
             try:
                 stop_network_stack()
             except Exception as e:
-                print("[Monitor] Encountered an issue trying to stop stack: ", e)
+                print(f"[Monitor] Encountered an issue trying to stop stack: {e}")
                 exit()
             try:
                 if config["can_configure_network"]:
@@ -566,8 +566,11 @@ def monitor_and_reelect(my_serial, config, shared_objs):
 def main():
     config = get_config()
     my_serial = get_serial()
+    plat = platform.system().lower()
     print(f"[Startup] Starting ISE network, use Ctrl-C to exit at anytime")
     print(f"[Startup] Device serial: {my_serial}")
+    print(f"[Startup] Device platform: {plat}")
+
 
     manager = Manager()
     mqtt_pub_queue = manager.Queue()
