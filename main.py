@@ -324,15 +324,11 @@ def monitor_and_reelect(my_serial, config, shared_objs):
                 print(f"[Monitor] Trying to reinitialize mqtt listener")
                 start_mqtt_listener(config, *shared_objs)
         except Exception as e:
-            print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
             try:
+                print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
                 stop_network_stack()
-            except Exception as e:
-                print(f"[Monitor] Encountered an issue trying to stop stack: {e}")
-                exit()
-            time.sleep(
-                2)  # Need to let OS take care of things idk (shit breaks if i don't include this for some reason)
-            try:
+                time.sleep(2)  # Need to let OS take care of things idk
+
                 if config["can_configure_network"]:
                     seen = scan_wifi(config['LEADER_SSID_PREFIX'])
                     remote_serials = [extract_serial_from_ssid(ssid, config['LEADER_SSID_PREFIX']) for ssid in seen]
