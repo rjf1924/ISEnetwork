@@ -64,16 +64,15 @@ def setup_ap(serial, prefix, interface, password):
 
 
 def disconnect_ap(interface):
-    try:
-        # Delete the hotspot connection first (completely removes it)
-        subprocess.run(['nmcli', 'connection', 'delete', 'Hotspot'], check=True)
-    except Exception as e:
-        print(f"[Disconnect AP] No Hotspot to delete: {e}")
+    # try:
+    #     ssid = prefix + serial
+    #     subprocess.run(['nmcli', 'connection', 'delete', ssid], check=True)
+    # except Exception as e:
+    #     print(f"[Disconnect AP] No Hotspot to delete: {e}")
 
     try:
-        # Then just bring the device down and up cleanly
         subprocess.run(['nmcli', 'device', 'disconnect', interface], check=True)
-        time.sleep(1)
+        time.sleep(5)
         subprocess.run(['nmcli', 'device', 'connect', interface], check=True)
     except Exception as e:
         print(f"[Disconnect AP] Error during device reset: {e}")
