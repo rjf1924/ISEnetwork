@@ -7,7 +7,6 @@ import socket
 class SharedManager(BaseManager): pass
 
 
-
 SharedManager.register('get_mqtt_pub_queue')
 SharedManager.register('get_socket_queue')
 SharedManager.register('get_peer_list')
@@ -110,7 +109,7 @@ class SocketConnection:
                 self.socket.sendall(size.to_bytes(4, 'big'))
                 self.socket.sendall(data)
         except Exception as e:
-            print(f"[PersistentSender] Error sending to {self.addr}: {e}")
+            print(f"[Socket Connection] Error sending to {self.addr}: {e}")
             self.close()
 
     def close(self):

@@ -155,7 +155,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
                         mqtt_client_sockets.append(conn)
                         active_sockets.add(conn)
                 except Exception as e:
-                    pass  # optional: print or log error
+                    print(f"[Broadcast Server] Error: {e}")
         finally:
             server.close()
             print("[Broadcast Server] Exiting...")
@@ -297,7 +297,7 @@ def stop_mqtt_process():
         print("[Network Stack] Stopping MQTT Process...")
         #mqtt_process.terminate(timeout=10)
         mqtt_process.join(timeout=10)
-        if mqtt_process.is_alive():
+        if mqtt_process and mqtt_process.is_alive():
             mqtt_process.terminate()
             mqtt_process.join()
     mqtt_process = None
@@ -309,7 +309,7 @@ def stop_socket_process():
         print("[Network Stack] Stopping Socket Process...")
         #socket_process.terminate()
         socket_process.join(timeout=10)
-        if socket_process.is_alive():
+        if socket_process and socket_process.is_alive():
             socket_process.terminate()
             socket_process.join()
     socket_process = None

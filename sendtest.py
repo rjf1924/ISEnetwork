@@ -24,14 +24,15 @@ if __name__ == "__main__":
             img = np.random.randint(0, 256, size=(200, 200, 1), dtype=np.uint8)
             encoded = encode_image(img)
             print("Sending frame to....", PEERS['Robert'])
-            connection.send(encoded)
+            #connection.send(encoded)
             cv2.imshow('test', img)
             cv2.waitKey(0)
             #time.sleep(0.05)  # ~20 FPS
         else:
             break
+        i += 1
     print("Closed socket")
     socket.close()
 
-    i += 1
+
     #time.sleep(.5)
