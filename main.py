@@ -76,10 +76,13 @@ def connect_to_leader(leader_serial, prefix, interface, password):
     time.sleep(2)
 
     ssid = prefix + leader_serial
+
     subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
                     ssid, 'ifname', interface,
                     'password', password],
-                   check=True)
+                    check=True)
+
+
 
 
 # --- MQTT and Socket Infrastructure ---
@@ -315,6 +318,7 @@ def stop_socket_process():
         print("[Network Stack] Stopping Socket Process...")
         # socket_process.terminate()
         socket_process.join(timeout=10)
+        print("[Network Stack] Stopping Socket Process...")
         if socket_process and socket_process.is_alive():
             socket_process.terminate()
             socket_process.join()
@@ -359,8 +363,9 @@ def start_manager_server():
         server = m.get_server()
         server.serve_forever()
 
-    manager_server_thread = threading.Thread(target=run_manager_server, daemon=True)
-    manager_server_thread.start()
+    if manager_server_thread and not manager_server_thread.is_alive():
+        manager_server_thread = threading.Thread(target=run_manager_server, daemon=True)
+        manager_server_thread.start()
 
 
 def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
