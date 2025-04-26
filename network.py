@@ -106,8 +106,8 @@ class SocketConnection:
             data = pickle.dumps(frame)
             size = len(data)
             with self.lock:
-                self.socket.sendall(size.to_bytes(4, 'big'))
-                self.socket.sendall(data)
+                payload = size.to_bytes(4, 'big') + data
+                self.socket.sendall(payload)
         except Exception as e:
             print(f"[Socket Connection] Error sending to {self.addr}: {e}")
             self.close()
