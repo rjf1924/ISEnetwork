@@ -69,8 +69,8 @@ def disconnect_ap(interface):
         for line in result.stdout.strip().split('\n'):
             dev, conn = line.split(':')
             if dev == interface and conn != "--":
-                subprocess.run(['nmcli', 'con', 'down', conn], check=True)
-                subprocess.run(['nmcli', 'con', 'delete', conn], check=True)
+                subprocess.run(['nmcli', 'con', 'down', conn], check=True, capture_output=True)
+                subprocess.run(['nmcli', 'con', 'delete', conn], check=True, capture_output=True)
                 break
     except Exception as e:
         print(f"[disconnect_ap] Error: {e}")
