@@ -337,7 +337,7 @@ def stop_socket_process():
         # socket_process.terminate()
         socket_process.join(timeout=10)
         if socket_process and socket_process.is_alive():
-            print("[Network Stack] Forceing Socket Process to stop...")
+            print("[Network Stack] Forcing Socket Process to stop...")
             socket_process.terminate()
             socket_process.join()
     shutdown_socket_event.clear()
@@ -450,6 +450,8 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
                                           config['WIFI_PASSWORD'])
                         print(f"[Monitor] Successfully connected to: {leader_serial}")
 
+                    shared_objs[2][config['name']] = get_my_ip() # Update peer list
+
                     time.sleep(5)
                     print(f"[Monitor] Starting stack...")
                     start_event.set()
@@ -485,7 +487,7 @@ def main():
     mqtt_pub_queue = manager.Queue()
     socket_queue = manager.Queue(maxsize=10)
     peer_list = manager.dict()
-    peer_list[config['name']] = get_my_ip()
+    peer_list[config['name']] = "0.0.0.0"
 
     SharedManager.register('get_mqtt_pub_queue', callable=lambda: mqtt_pub_queue)
     SharedManager.register('get_socket_queue', callable=lambda: socket_queue)
