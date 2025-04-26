@@ -22,8 +22,9 @@ active_sockets = set()
 mqtt_process = None
 socket_process = None
 manager_server_thread = None
-shutdown_event = Event()  # <--- Define shutdown_event inside main
-
+shutdown_total_event = Event()
+shutdown_mqtt_event = Event()
+shutdown_socket_event = Event()
 
 # --- WiFi Mesh Functions ---
 def get_serial():
@@ -295,18 +296,22 @@ def clear_active_sockets():
 
 def stop_mqtt_process():
     global mqtt_process
+    shutdown_mqtt_event.set()
     if mqtt_process and mqtt_process.is_alive():
         print("[Network Stack] Stopping MQTT Process...")
         # mqtt_process.terminate(timeout=10)
         mqtt_process.join(timeout=10)
         if mqtt_process and mqtt_process.is_alive():
+            print("[Network Stack] Forcing MQTT Process to stop...")
             mqtt_process.terminate()
             mqtt_process.join()
+    shutdown_mqtt_event.clear()
     mqtt_process = None
 
 
 def stop_socket_process():
     global socket_process
+    shutdown_socket_event.set()
     if socket_process and socket_process.is_alive():
         print("[Network Stack] Stopping Socket Process...")
         # socket_process.terminate()
@@ -314,6 +319,7 @@ def stop_socket_process():
         if socket_process and socket_process.is_alive():
             socket_process.terminate()
             socket_process.join()
+    shutdown_socket_event.clear()
     socket_process = None
 
 
@@ -333,7 +339,7 @@ def start_mqtt_listener(config, mqtt_pub_queue, peer_list):
     global mqtt_process
     print("[Network Stack] Starting MQTT Listener...")
     mqtt_process = Process(target=mqtt_listener,
-                           args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list, shutdown_event))
+                           args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list, shutdown_mqtt_event))
     mqtt_process.start()
 
 
@@ -341,7 +347,7 @@ def start_socket_listener(config, socket_queue, peer_list):
     global socket_process
     print("[Network Stack] Starting Socket Listener...")
     socket_process = Process(target=socket_listener,
-                             args=(config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_event))
+                             args=(config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_socket_event))
     socket_process.start()
 
 
@@ -365,7 +371,7 @@ def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
 
 
 def monitor_and_reelect(my_serial, config, shared_objs, start_event):
-    while not shutdown_event.is_set():
+    while not shutdown_total_event.is_set():
         try:
             if platform.system().lower() == "windows":
                 print(f"[Monitor] Checking connection...(Windows)")
@@ -432,7 +438,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
 
 def graceful_exit(signum, frame, config):
     print("[Shutdown] Shutdown signal received. Exiting...")
-    shutdown_event.set()
+    shutdown_total_event.set()
     print("[Shutdown] Shutting down network stack...")
     stop_network_stack()
     if platform.system().lower() != "windows":
@@ -472,7 +478,7 @@ def main():
     threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs, start_event),
                      daemon=False).start()
 
-    while not shutdown_event.is_set():
+    while not shutdown_total_event.is_set():
         if start_event.is_set():
             start_network_stack(config, *shared_objs)
             start_event.clear()
