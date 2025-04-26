@@ -15,7 +15,6 @@ if __name__ == '__main__':
         if data is not None:
             address, frame = data
             img = decode_image(frame)
-            print(address)
             cv2.imshow(network.resolve_name(address[0]), img)
             cv2.waitKey(1)
 
