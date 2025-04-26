@@ -26,6 +26,7 @@ shutdown_total_event = Event()
 shutdown_mqtt_event = Event()
 shutdown_socket_event = Event()
 
+
 # --- WiFi Mesh Functions ---
 def get_serial():
     if platform.system().lower() != "windows":
@@ -51,6 +52,7 @@ def elect_leader(remote_serials):
         return max(remote_serials)
     return None
 
+
 def get_ssid():
     system = platform.system().lower()
     try:
@@ -70,6 +72,7 @@ def get_ssid():
         print(f"[Get SSID] Error: {e}")
     return None
 
+
 def setup_ap(serial, prefix, interface, password):
     ssid = prefix + serial
     subprocess.run(['nmcli', 'dev', 'wifi', 'hotspot',
@@ -80,13 +83,14 @@ def setup_ap(serial, prefix, interface, password):
                     'password', password],
                    check=True)
 
+
 def disconnect_ap(interface):
     try:
         ssid = get_ssid()
         if ssid:
             subprocess.run(['nmcli', 'connection', 'delete', ssid], check=True)
     except Exception as e:
-        print(f"[Disconnect AP] No Hotspot to delete: {e}")
+        pass
 
     try:
         subprocess.run(['nmcli', 'device', 'disconnect', interface], check=True)
@@ -106,9 +110,7 @@ def connect_to_leader(leader_serial, prefix, interface, password):
     subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
                     ssid, 'ifname', interface,
                     'password', password],
-                    check=True)
-
-
+                   check=True)
 
 
 # --- MQTT and Socket Infrastructure ---
@@ -376,7 +378,8 @@ def start_socket_listener(config, socket_queue, peer_list):
     global socket_process
     print("[Network Stack] Starting Socket Listener...")
     socket_process = Process(target=socket_listener,
-                             args=(config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_socket_event))
+                             args=(
+                             config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_socket_event))
     socket_process.start()
 
 
@@ -403,23 +406,28 @@ def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
 def monitor_and_reelect(my_serial, config, shared_objs, start_event):
     while not shutdown_total_event.is_set():
         try:
-            if platform.system().lower() == "windows":
-                print(f"[Monitor] Checking connection...(Windows)")
-                result = subprocess.run(['netsh', 'wlan', 'show', 'interfaces'], capture_output=True, text=True)
-                ssid_ok = any(config['LEADER_SSID_PREFIX'] in line for line in result.stdout.splitlines() if
-                              "SSID" in line and "BSSID" not in line)
-                if "connected" not in result.stdout.lower() or not ssid_ok:
-                    raise Exception("[Monitor] Disconnected or wrong network")
-            else:
-                print("[Monitor] Checking connection... (Linux)")
-                cmd = "nmcli -t -f active,ssid dev wifi"
-                c = delegator.run(cmd)
-                active = [line for line in c.out.splitlines() if line.startswith('yes:')]
-                print(f"[Monitor] Active connection: {active}")
-                if not active or config['LEADER_SSID_PREFIX'] not in active[0]:
-                    raise Exception("Disconnected or wrong network")
+            print(f"[Monitor] Checking connection...")
+            ssid = get_ssid()
+            print(f"[Monitor] Connection: {ssid}")
+            if not ssid or ssid and config['LEADER_SSID_PREFIX'] not in ssid:
+                raise Exception("[Monitor] Disconnected or wrong network")
+
+            # if platform.system().lower() == "windows":
+            #     print(f"[Monitor] Checking connection...(Windows)")
+            #     result = subprocess.run(['netsh', 'wlan', 'show', 'interfaces'], capture_output=True, text=True)
+            #     ssid_ok = any(config['LEADER_SSID_PREFIX'] in line for line in result.stdout.splitlines() if
+            #                   "SSID" in line and "BSSID" not in line)
+            #     if "connected" not in result.stdout.lower() or not ssid_ok:
+            #         raise Exception("[Monitor] Disconnected or wrong network")
+            # else:
+            #     print("[Monitor] Checking connection... (Linux)")
+            #     cmd = "nmcli -t -f active,ssid dev wifi"
+            #     c = delegator.run(cmd)
+            #     active = [line for line in c.out.splitlines() if line.startswith('yes:')]
+            #     print(f"[Monitor] Active connection: {active}")
+            #     if not active or config['LEADER_SSID_PREFIX'] not in active[0]:
+            #         raise Exception("Disconnected or wrong network")
             # Connected to a pi network!
-            print(f"[Monitor] Successful connection to the network")
             print(f"[Monitor] MQTT listener status: {mqtt_process}")
             print(f"[Monitor] Socket Listener status: {socket_process}")
             if not mqtt_process and not socket_process:
