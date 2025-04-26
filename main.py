@@ -63,7 +63,10 @@ def setup_ap(serial, prefix, interface, password):
 
 
 def disconnect_ap(interface):
-    subprocess.run(['nmcli', 'dev', 'disconnect', interface], check=True)
+    try:
+        subprocess.run(['nmcli', 'dev', 'disconnect', interface], check=True)
+    except Exception as e:
+        pass
 
 
 def connect_to_leader(leader_serial, prefix, interface, password):
