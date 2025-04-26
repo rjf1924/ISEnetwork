@@ -65,15 +65,18 @@ def setup_ap(serial, prefix, interface, password):
 
 def disconnect_ap(interface):
     try:
-        result = subprocess.run(['nmcli', '-t', '-f', 'DEVICE,CONNECTION', 'device'], capture_output=True, text=True, check=True)
-        for line in result.stdout.strip().split('\n'):
-            dev, conn = line.split(':')
-            if dev == interface and conn != "--":
-                subprocess.run(['nmcli', 'con', 'down', conn], check=True, capture_output=True)
-                subprocess.run(['nmcli', 'con', 'delete', conn], check=True, capture_output=True)
-                break
+        # Delete the hotspot connection first (completely removes it)
+        subprocess.run(['nmcli', 'connection', 'delete', 'Hotspot'], check=True)
     except Exception as e:
-        print(f"[disconnect_ap] Error: {e}")
+        print(f"[Disconnect AP] No Hotspot to delete: {e}")
+
+    try:
+        # Then just bring the device down and up cleanly
+        subprocess.run(['nmcli', 'device', 'disconnect', interface], check=True)
+        time.sleep(1)
+        subprocess.run(['nmcli', 'device', 'connect', interface], check=True)
+    except Exception as e:
+        print(f"[Disconnect AP] Error during device reset: {e}")
 
 
 def connect_to_leader(leader_serial, prefix, interface, password):
