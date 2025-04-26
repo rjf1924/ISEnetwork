@@ -172,7 +172,6 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         except Empty:
             time.sleep(0.01)
 
-    print("[MQTT Listener] Attempting to exit MQTT...")
     client.loop_stop()
     client.disconnect()
     print("[MQTT Listener] Exiting...")
