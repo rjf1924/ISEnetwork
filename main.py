@@ -402,6 +402,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
             print(f"[Monitor] Checking connection...")
             ssid = get_ssid()
             print(f"[Monitor] Connection: {ssid}")
+            print(f"[Monitor] Peers:\n{shared_objs[2]}")
             if not ssid or ssid and config['LEADER_SSID_PREFIX'] not in ssid:
                 raise Exception("[Monitor] Disconnected or wrong network")
 
