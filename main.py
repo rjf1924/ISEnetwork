@@ -51,6 +51,24 @@ def elect_leader(remote_serials):
         return max(remote_serials)
     return None
 
+def get_ssid():
+    system = platform.system().lower()
+    try:
+        if system == "windows":
+            result = subprocess.run(['netsh', 'wlan', 'show', 'interfaces'], capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if "SSID" in line and "BSSID" not in line:
+                    ssid = line.split(":", 1)[1].strip()
+                    if ssid:
+                        return ssid
+        else:
+            result = subprocess.run(['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'], capture_output=True, text=True)
+            for line in result.stdout.strip().split('\n'):
+                if line.startswith('yes:'):
+                    return line.split(':', 1)[1]
+    except Exception as e:
+        print(f"[Get SSID] Error: {e}")
+    return None
 
 def setup_ap(serial, prefix, interface, password):
     ssid = prefix + serial
@@ -62,13 +80,13 @@ def setup_ap(serial, prefix, interface, password):
                     'password', password],
                    check=True)
 
-
 def disconnect_ap(interface):
-    # try:
-    #     ssid = prefix + serial
-    #     subprocess.run(['nmcli', 'connection', 'delete', ssid], check=True)
-    # except Exception as e:
-    #     print(f"[Disconnect AP] No Hotspot to delete: {e}")
+    try:
+        ssid = get_ssid()
+        if ssid:
+            subprocess.run(['nmcli', 'connection', 'delete', ssid], check=True)
+    except Exception as e:
+        print(f"[Disconnect AP] No Hotspot to delete: {e}")
 
     try:
         subprocess.run(['nmcli', 'device', 'disconnect', interface], check=True)
