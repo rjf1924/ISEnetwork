@@ -171,9 +171,11 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         except Empty:
             time.sleep(0.01)
 
+    print("[MQTT Listener] Attempting to exit MQTT...")
     client.loop_stop()
     client.disconnect()
     print("[MQTT Listener] Exiting...")
+
 
 def socket_listener(config, client_ip, server_ip, socket_queue, peer_list, shutdown_event):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -295,7 +297,7 @@ def stop_mqtt_process():
     global mqtt_process
     if mqtt_process and mqtt_process.is_alive():
         print("[Network Stack] Stopping MQTT Process...")
-        #mqtt_process.terminate(timeout=10)
+        # mqtt_process.terminate(timeout=10)
         mqtt_process.join(timeout=10)
         if mqtt_process and mqtt_process.is_alive():
             mqtt_process.terminate()
@@ -307,7 +309,7 @@ def stop_socket_process():
     global socket_process
     if socket_process and socket_process.is_alive():
         print("[Network Stack] Stopping Socket Process...")
-        #socket_process.terminate()
+        # socket_process.terminate()
         socket_process.join(timeout=10)
         if socket_process and socket_process.is_alive():
             socket_process.terminate()
@@ -419,7 +421,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
                     time.sleep(5)
                     print(f"[Monitor] Starting stack...")
                     start_event.set()
-                    #start_network_stack(config, *shared_objs)
+                    # start_network_stack(config, *shared_objs)
                 else:
                     print("[Monitor] Please configure network settings... Exiting...")
                     exit()
@@ -467,7 +469,8 @@ def main():
     signal.signal(signal.SIGTERM, lambda s, f: graceful_exit(s, f, config))
 
     print(f"[Startup] Starting Monitor...")
-    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs, start_event), daemon=False).start()
+    threading.Thread(target=monitor_and_reelect, args=(my_serial, config, shared_objs, start_event),
+                     daemon=False).start()
 
     while not shutdown_event.is_set():
         if start_event.is_set():
@@ -483,5 +486,6 @@ def main():
 
 if __name__ == "__main__":
     import multiprocessing
+
     multiprocessing.freeze_support()
     main()
