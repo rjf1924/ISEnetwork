@@ -346,8 +346,8 @@ def stop_socket_process():
         print("[Network Stack] Stopping Socket Process...")
         # socket_process.terminate()
         socket_process.join(timeout=10)
-        print("[Network Stack] Stopping Socket Process...")
         if socket_process and socket_process.is_alive():
+            print("[Network Stack] Forceing Socket Process to stop...")
             socket_process.terminate()
             socket_process.join()
     shutdown_socket_event.clear()
