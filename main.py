@@ -297,6 +297,9 @@ def stop_mqtt_process():
         print("[Network Stack] Stopping MQTT Process...")
         #mqtt_process.terminate(timeout=10)
         mqtt_process.join(timeout=10)
+        if mqtt_process.is_alive():
+            mqtt_process.terminate()
+            mqtt_process.join()
     mqtt_process = None
 
 
@@ -306,6 +309,9 @@ def stop_socket_process():
         print("[Network Stack] Stopping Socket Process...")
         #socket_process.terminate()
         socket_process.join(timeout=10)
+        if socket_process.is_alive():
+            socket_process.terminate()
+            socket_process.join()
     socket_process = None
 
 
