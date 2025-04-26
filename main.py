@@ -296,7 +296,6 @@ def get_my_ip():
             return None
 
 
-
 # --- NETWORK STACK ---
 
 def clear_active_sockets():
@@ -396,13 +395,22 @@ def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
     start_mqtt_listener(config, mqtt_pub_queue, peer_list)
     start_socket_listener(config, socket_queue, peer_list)
 
+
+def print_peer_list(peer_list: dict):
+    for name, ip in peer_list.items():
+        print(f"{name:<15}|{ip}")
+
+
 def monitor_and_reelect(my_serial, config, shared_objs, start_event):
     while not shutdown_total_event.is_set():
         try:
+            print("")
             print(f"[Monitor] Checking connection...")
             ssid = get_ssid()
             print(f"[Monitor] Connection: {ssid}")
-            print(f"[Monitor] Peers:\n{shared_objs[2]}")
+            print(f"[Monitor] Peers: ")
+            print_peer_list(shared_objs[2])
+
             if not ssid or ssid and config['LEADER_SSID_PREFIX'] not in ssid:
                 raise Exception("[Monitor] Disconnected or wrong network")
 
