@@ -388,7 +388,7 @@ def start_manager_server():
         server = m.get_server()
         server.serve_forever()
 
-    if manager_server_thread and not manager_server_thread.is_alive():
+    if manager_server_thread and not manager_server_thread.is_alive() or not manager_server_thread:
         manager_server_thread = threading.Thread(target=run_manager_server, daemon=True)
         manager_server_thread.start()
 
