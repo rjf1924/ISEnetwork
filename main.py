@@ -109,7 +109,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
     def on_message(client, userdata, message):
         msg = message.payload.decode()
         topic = message.topic
-        print(f"[MQTT]{topic}|{msg}")
+        print(f"[MQTT]{topic:<50}|{msg}")
         # Handle MQTT Server Commands
         if topic == "connect":
             name, ip = msg.split(":")
