@@ -101,10 +101,6 @@ def disconnect_ap(interface):
 
 
 def connect_to_leader(leader_serial, prefix, interface, password):
-    disconnect_ap(interface)
-
-    time.sleep(2)
-
     ssid = prefix + leader_serial
 
     subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
@@ -412,22 +408,6 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
             if not ssid or ssid and config['LEADER_SSID_PREFIX'] not in ssid:
                 raise Exception("[Monitor] Disconnected or wrong network")
 
-            # if platform.system().lower() == "windows":
-            #     print(f"[Monitor] Checking connection...(Windows)")
-            #     result = subprocess.run(['netsh', 'wlan', 'show', 'interfaces'], capture_output=True, text=True)
-            #     ssid_ok = any(config['LEADER_SSID_PREFIX'] in line for line in result.stdout.splitlines() if
-            #                   "SSID" in line and "BSSID" not in line)
-            #     if "connected" not in result.stdout.lower() or not ssid_ok:
-            #         raise Exception("[Monitor] Disconnected or wrong network")
-            # else:
-            #     print("[Monitor] Checking connection... (Linux)")
-            #     cmd = "nmcli -t -f active,ssid dev wifi"
-            #     c = delegator.run(cmd)
-            #     active = [line for line in c.out.splitlines() if line.startswith('yes:')]
-            #     print(f"[Monitor] Active connection: {active}")
-            #     if not active or config['LEADER_SSID_PREFIX'] not in active[0]:
-            #         raise Exception("Disconnected or wrong network")
-            # Connected to a pi network!
             print(f"[Monitor] MQTT listener status: {mqtt_process}")
             print(f"[Monitor] Socket Listener status: {socket_process}")
             if not mqtt_process and not socket_process:
