@@ -416,6 +416,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
 
             print(f"[Monitor] MQTT listener status: {mqtt_process}")
             print(f"[Monitor] Socket Listener status: {socket_process}")
+
             if not mqtt_process and not socket_process:
                 print(f"[Monitor] Network stack offline... Starting stack")
                 start_event.set()
@@ -424,7 +425,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
             #     start_mqtt_listener()
             # if (socket_process and not socket_process.is_alive()):
             #     start_socket_listener()
-
+            print("")
         except Exception as e:
             try:
                 print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
