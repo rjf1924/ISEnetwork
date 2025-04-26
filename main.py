@@ -144,16 +144,16 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(("localhost", 60001))
         server.listen()
-        server.setblocking(False)
+        server.settimeout(1.0)
 
         try:
             while not shutdown_event.is_set():
                 try:
-                    readable, _, _ = select.select([server], [], [], 1.0)  # 1 sec timeout
-                    if server in readable:
-                        conn, addr = server.accept()
-                        mqtt_client_sockets.append(conn)
-                        active_sockets.add(conn)
+                    conn, addr = server.accept()
+                    mqtt_client_sockets.append(conn)
+                    active_sockets.add(conn)
+                except socket.timeout:
+                    continue  # just loop again if no connection
                 except Exception as e:
                     print(f"[Broadcast Server] Error: {e}")
         finally:
