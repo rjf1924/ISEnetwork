@@ -2,6 +2,9 @@ import pickle
 from multiprocessing.managers import BaseManager
 import threading
 import socket
+import time
+import json
+from config_helper import get_config
 
 
 class SharedManager(BaseManager): pass
@@ -14,14 +17,15 @@ SharedManager.register('get_peer_list')
 m = SharedManager(address=('localhost', 50000), authkey=b'sharedsecret')
 m.connect()
 
-
 _mqtt_pub_queue = m.get_mqtt_pub_queue()
 _socket_queue = m.get_socket_queue()
 _peer_list = m.get_peer_list()
 
-print("Network Variables Synced to Main Process...")
+print("[Network] Network Variables Synced to Main Process...")
 
 _local_callback_registry = {}
+
+config = get_config()
 
 
 ######## MQTT ########
@@ -95,28 +99,61 @@ class SocketConnection:
     Establish a socket connection between two devices
     """
 
-    def __init__(self, addr):
-        self.addr = addr
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((addr, 25000))
+    def __init__(self, name, port=25000, reconnect_delay=2):
+        self.addr = None
+        self.target_user = name
+        self.port = port
+        self.reconnect_delay = reconnect_delay
+        self.socket = None
         self.lock = threading.Lock()
+        self.connect()
+
+    def connect(self):
+        while True:
+            try:
+                if self.target_user in get_peers():
+                    self.addr = resolve_ip(self.target_user)
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.connect((self.addr, self.port))
+                    s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                    self.socket = s
+                    print(f"[Socket Connection] Connected to {self.target_user}|{self.addr}")
+                    break
+                else:
+                    print(f"[Socket Connection] {self.target_user} not on the network")
+                    break
+            except Exception as e:
+                print(f"[Socket Connection] Failed to connect to {self.addr}, retrying in {self.reconnect_delay}s")
+                time.sleep(self.reconnect_delay)
 
     def send(self, frame):
         try:
             data = pickle.dumps(frame)
             size = len(data)
+            payload = size.to_bytes(4, 'big') + data
+
             with self.lock:
-                payload = size.to_bytes(4, 'big') + data
-                self.socket.sendall(payload)
+                view = memoryview(payload)
+                while view:
+                    n = self.socket.send(view)
+                    view = view[n:]
+
         except Exception as e:
-            print(f"[Socket Connection] Error sending to {self.addr}: {e}")
+            print(f"[Socket Connection] Error sending to {self.target_user}: {e}")
             self.close()
+            self.connect()
+            self.send(frame)
 
     def close(self):
         try:
-            self.socket.close()
+            if self.socket:
+                self.socket.close()
+                self.socket = None
         except:
             pass
+
+    def __del__(self):
+        self.close()
 
 
 ####### PEERS ######
@@ -127,6 +164,25 @@ def get_peers():
       "User1deviceName": (IP),
       "User2deviceName": (IP),
     }
-    :return:
     """
     return dict(_peer_list)
+
+
+def resolve_ip(name):
+    """
+    Gets the ip of a device on the network given name
+    """
+    if name in get_peers():
+        return get_peers()[name]
+    else:
+        return None
+
+
+def resolve_name(ip):
+    """
+    Gets the name of a device on the network given ip
+    """
+    for name, addr in get_peers().items():
+        if addr == ip:
+            return name
+    return None

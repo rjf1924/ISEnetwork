@@ -16,6 +16,7 @@ import signal
 import sys
 import delegator
 import select
+from config_helper import get_config
 
 # --- Global Variables ---
 active_sockets = set()
@@ -295,12 +296,6 @@ def get_my_ip():
             return None
 
 
-# --- CONFIG ---
-def get_config():
-    with open("config.json", "r") as f:
-        config = json.load(f)
-    return config
-
 
 # --- NETWORK STACK ---
 
@@ -375,7 +370,7 @@ def start_socket_listener(config, socket_queue, peer_list):
     print("[Network Stack] Starting Socket Listener...")
     socket_process = Process(target=socket_listener,
                              args=(
-                             config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_socket_event))
+                                 config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_socket_event))
     socket_process.start()
 
 
@@ -384,9 +379,12 @@ def start_manager_server():
     print("[Network Stack] Starting Shared Variables...")
 
     def run_manager_server():
-        m = SharedManager(address=('', 50000), authkey=b'sharedsecret')
-        server = m.get_server()
-        server.serve_forever()
+        try:
+            m = SharedManager(address=('', 50000), authkey=b'sharedsecret')
+            server = m.get_server()
+            server.serve_forever()
+        except:
+            pass
 
     if manager_server_thread and not manager_server_thread.is_alive() or not manager_server_thread:
         manager_server_thread = threading.Thread(target=run_manager_server, daemon=True)
@@ -397,7 +395,6 @@ def start_network_stack(config, mqtt_pub_queue, socket_queue, peer_list):
     start_manager_server()
     start_mqtt_listener(config, mqtt_pub_queue, peer_list)
     start_socket_listener(config, socket_queue, peer_list)
-
 
 def monitor_and_reelect(my_serial, config, shared_objs, start_event):
     while not shutdown_total_event.is_set():
@@ -481,7 +478,7 @@ def main():
 
     SharedManager.register('get_mqtt_pub_queue', callable=lambda: mqtt_pub_queue)
     SharedManager.register('get_socket_queue', callable=lambda: socket_queue)
-    SharedManager.register('get_peer_list', callable=lambda: peer_list, proxytype=type(peer_list))
+    SharedManager.register('get_peer_dict', callable=lambda: peer_list, proxytype=type(peer_list))
 
     shared_objs = (mqtt_pub_queue, socket_queue, peer_list)
 
