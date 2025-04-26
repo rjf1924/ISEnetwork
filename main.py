@@ -461,7 +461,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
                     exit()
             except Exception as ex:
                 print("[Monitor] Failed trying to configure network:", ex)
-        time.sleep(30)
+        time.sleep(60)
 
 
 def graceful_exit(signum, frame, config):

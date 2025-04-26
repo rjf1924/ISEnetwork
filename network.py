@@ -66,15 +66,17 @@ def publish(topic, message):
 
 def get_next_frame():
     """
-    Yields the next frame in the list of frame in form (addr, data)
+    Yields the next frame in the list of frame in form ((addr,port), data)
     """
     while True:
         try:
             msg = _socket_queue.get_nowait()
             if msg is not None:
-                addr, data = msg
+                addr_and_port, data = msg
                 data_decoded = pickle.loads(data)
-                yield addr, data_decoded
+                addr = addr_and_port[1:-1].split(',')[0][1:-1]
+                port = addr_and_port[1:-1].split(',')[1][1:]
+                yield (addr, port), data_decoded
         except Exception:
             yield None
 
