@@ -85,10 +85,10 @@ def setup_ap(serial, prefix, interface, password):
                    check=True)
 
 
-def disconnect_ap(interface):
+def disconnect_ap(interface, leader_prefix):
     try:
         ssid = get_ssid()
-        if ssid:
+        if ssid and leader_prefix in ssid:
             subprocess.run(['nmcli', 'connection', 'delete', ssid], check=True)
     except Exception as e:
         pass
@@ -471,7 +471,7 @@ def graceful_exit(signum, frame, config):
     stop_network_stack()
     if platform.system().lower() != "windows":
         print("[Shutdown] Disconnecting AP...")
-        disconnect_ap(config['LAN_INTERFACE'])
+        disconnect_ap(config['LAN_INTERFACE'], config['LEADER_SSID_PREFIX'])
     sys.exit(0)
 
 
