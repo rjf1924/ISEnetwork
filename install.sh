@@ -48,7 +48,8 @@ cat > "$SCRIPT_DIR/config.json" <<EOF
   "LEADER_SSID_PREFIX": "pi-mesh-",
   "LAN_INTERFACE": "wlan0",
   "WIFI_PASSWORD": "ise411meshnet",
-  "can_configure_network": true
+  "can_configure_network": true,
+  "mosquitto_port": 1883
 }
 EOF
 

@@ -130,7 +130,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
     client.on_message = on_message
     client.on_connect = on_connect
     client.will_set(f"status/{config['name']}", payload="offline", qos=1, retain=True)
-    client.connect(server_ip, 1883)
+    client.connect(server_ip, int(config["mosquitto_port"]))
     client.loop_start()
 
     def mqtt_broadcast_server():
