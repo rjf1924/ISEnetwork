@@ -478,7 +478,7 @@ def main():
 
     SharedManager.register('get_mqtt_pub_queue', callable=lambda: mqtt_pub_queue)
     SharedManager.register('get_socket_queue', callable=lambda: socket_queue)
-    SharedManager.register('get_peer_dict', callable=lambda: peer_list, proxytype=type(peer_list))
+    SharedManager.register('get_peer_list', callable=lambda: peer_list, proxytype=type(peer_list))
 
     shared_objs = (mqtt_pub_queue, socket_queue, peer_list)
 
