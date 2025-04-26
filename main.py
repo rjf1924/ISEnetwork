@@ -430,7 +430,8 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
                 print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
                 stop_network_stack()
                 time.sleep(5)  # Need to let OS take care of things idk
-
+                if shutdown_total_event.is_set():
+                    break
                 if config["can_configure_network"]:
 
                     seen = scan_wifi(config['LEADER_SSID_PREFIX'])
