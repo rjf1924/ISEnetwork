@@ -138,15 +138,27 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
 
     def mqtt_broadcast_server():
         """
-        Accept internal socket connections
+        Accept internal socket connections for subscribers
         """
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(("localhost", 60001))
         server.listen()
-        while True:
-            conn, addr = server.accept()
-            mqtt_client_sockets.append(conn)
-            active_sockets.add(conn)
+        server.setblocking(False)
+
+        try:
+            while not shutdown_event.is_set():
+                try:
+                    readable, _, _ = select.select([server], [], [], 1.0)  # 1 sec timeout
+                    if server in readable:
+                        conn, addr = server.accept()
+                        mqtt_client_sockets.append(conn)
+                        active_sockets.add(conn)
+                except Exception as e:
+                    pass  # optional: print or log error
+        finally:
+            server.close()
+            print("[Broadcast Server] Exiting...")
 
     # Handle subscribing
     threading.Thread(target=mqtt_broadcast_server, daemon=True).start()
@@ -283,8 +295,8 @@ def stop_mqtt_process():
     global mqtt_process
     if mqtt_process and mqtt_process.is_alive():
         print("[Network Stack] Stopping MQTT Process...")
-        mqtt_process.terminate()
-        mqtt_process.join()
+        #mqtt_process.terminate(timeout=10)
+        mqtt_process.join(timeout=10)
     mqtt_process = None
 
 
@@ -292,8 +304,8 @@ def stop_socket_process():
     global socket_process
     if socket_process and socket_process.is_alive():
         print("[Network Stack] Stopping Socket Process...")
-        socket_process.terminate()
-        socket_process.join()
+        #socket_process.terminate()
+        socket_process.join(timeout=10)
     socket_process = None
 
 
@@ -369,6 +381,12 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
             if not mqtt_process and not socket_process:
                 print(f"[Monitor] Network stack offline... Starting stack")
                 start_event.set()
+            # TODO: Make network stack restart socket/mqtt listener
+            # if (mqtt_process and not socket_process.is_alive()):
+            #     start_mqtt_listener()
+            # if (socket_process and not socket_process.is_alive()):
+            #     start_socket_listener()
+
         except Exception as e:
             try:
                 print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
