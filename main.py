@@ -488,7 +488,15 @@ class NetworkMonitor:
         if not mqtt_process and not socket_process:
             print(f"[Monitor] Network stack offline... Starting stack")
             self.start_event.set()
-        # TODO: Make network stack restart socket/mqtt listener
+        # Healing of processes
+        if mqtt_process and not mqtt_process.is_alive():
+            print(f"[Monitor] MQTT Process offline... Attempting restart")
+            stop_mqtt_process()
+            start_mqtt_listener(self.config, self.shared_objs[0], self.shared_objs[2])
+        if socket and not socket_process.is_alive():
+            print(f"[Monitor] Socket Process offline... Attempting restart")
+            stop_socket_process()
+            start_socket_listener(self.config, self.shared_objs[1], self.shared_objs[2])
 
     def reconnect(self):
         print(f"[Monitor] Restarting...")
