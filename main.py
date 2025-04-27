@@ -54,7 +54,7 @@ def elect_leader(remote_serials):
     return None
 
 
-def get_ssid():
+def get_ssid(interface):
     system = platform.system().lower()
     try:
         if system == "windows":
@@ -65,10 +65,11 @@ def get_ssid():
                     if ssid:
                         return ssid
         else:
-            result = subprocess.run(['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'], capture_output=True, text=True)
-            for line in result.stdout.strip().split('\n'):
-                if line.startswith('yes:'):
-                    return line.split(':', 1)[1]
+            result = subprocess.run(
+                ['nmcli', '-g', 'GENERAL.CONNECTION', 'device', 'show', interface],
+                capture_output=True, text=True, check=True
+            )
+            return result.stdout.strip() or None
     except Exception as e:
         print(f"[Get SSID] Error: {e}")
     return None
@@ -87,7 +88,7 @@ def setup_ap(serial, prefix, interface, password):
 
 def disconnect_ap(interface, leader_prefix):
     try:
-        ssid = get_ssid()
+        ssid = get_ssid(interface)
         if ssid and leader_prefix in ssid:
             subprocess.run(['nmcli', 'connection', 'delete', ssid], check=True)
     except Exception as e:
@@ -406,7 +407,7 @@ def monitor_and_reelect(my_serial, config, shared_objs, start_event):
         try:
             print("")
             print(f"[Monitor] Checking connection...")
-            ssid = get_ssid()
+            ssid = get_ssid(config['LAN_INTERFACE'])
             print(f"[Monitor] Connection: {ssid}")
             print(f"[Monitor] Peers: ")
             print_peer_list(shared_objs[2])
