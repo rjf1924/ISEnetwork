@@ -490,7 +490,6 @@ class NetworkMonitor:
         ssid = get_ssid(self.config['LAN_INTERFACE'])
         print(f"[Monitor] Connection: {ssid}")
         print(f"[Monitor] Peers: ")
-        print(f"[Monitor] Peers: ")
         print_peer_list(self.shared_objs[2])
 
         if not ssid or self.config['LEADER_SSID_PREFIX'] not in ssid:
