@@ -62,57 +62,40 @@ def elect_leader(remote_serials):
 
 
 def handle_leader_election(my_serial, config):
-    """
-    Returns True if made an AP or connected, False if another connection came online
-    """
     prefix = config['LEADER_SSID_PREFIX']
     interface = config['LAN_INTERFACE']
     password = config['WIFI_PASSWORD']
 
     seen_serials = scan_for_leaders(prefix)
 
-    if should_become_leader(my_serial, seen_serials):
-        # Random short wait before becoming leader to avoid collision
-        wait_time = random.uniform(1, 5)
-        print(f"[Election] Highest serial ({my_serial}). Waiting {wait_time:.1f}s before promoting to leader...")
-        start = time.time()
+    if seen_serials:
+        leader_serial = elect_leader(seen_serials)
+        if leader_serial:
+            print(f"[Election] Found leader {leader_serial} immediately. Connecting...")
+            connect_to_leader(leader_serial, prefix, interface, password)
+            return
 
-        while time.time() - start < wait_time:
-            if shutdown_total_event.is_set():
-                return False
-            seen_serials = scan_for_leaders(prefix)
-            if any(serial != my_serial for serial in seen_serials):
-                print(f"[Election] Another leader detected during backoff. Cancelling promotion.")
-                return False
+    wait_time = random.uniform(1, 10)
+    print(f"[Election] No leader found. Waiting {wait_time:.1f}s before self-promotion...")
+    start = time.time()
 
-            time.sleep(1)
+    while time.time() - start < wait_time:
+        if shutdown_total_event.is_set():
+            return
 
-        # No leader appeared during wait: become leader
-        print(f"[Election] Promoting self to leader (AP mode)...")
-        setup_ap(my_serial, prefix, interface, password)
-        return True
-
-    else:
-        # Wait for a leader to appear
-        print(f"[Election] Higher serial detected. Waiting for leader...")
-        start = time.time()
-        timeout = 15
-
-        while time.time() - start < timeout:
-            if shutdown_total_event.is_set():
-                return False
-            seen_serials = scan_for_leaders(prefix)
+        seen_serials = scan_for_leaders(prefix)
+        if seen_serials:
             leader_serial = elect_leader(seen_serials)
             if leader_serial:
-                print(f"[Election] Found leader {leader_serial}. Connecting...")
+                print(f"[Election] Found leader {leader_serial} during backoff. Connecting...")
                 connect_to_leader(leader_serial, prefix, interface, password)
-                return True
-            time.sleep(1)
+                return
 
-        # If no leader still after timeout, fallback to self
-        print(f"[Election] Timeout waiting for leader. Promoting self.")
-        setup_ap(my_serial, prefix, interface, password)
-        return True
+        time.sleep(0.5)
+
+    print(f"[Election] No leader appeared. Promoting self to leader...")
+    setup_ap(my_serial, prefix, interface, password)
+
 
 def scan_for_leaders(prefix):
     seen = scan_wifi(prefix)
