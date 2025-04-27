@@ -152,11 +152,13 @@ def disconnect_ap(interface, leader_prefix):
 
 def connect_to_leader(leader_serial, prefix, interface, password):
     ssid = prefix + leader_serial
-
-    subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
-                    ssid, 'ifname', interface,
-                    'password', password],
-                   check=True)
+    try:
+        subprocess.run(['nmcli', 'dev', 'wifi', 'connect',
+                        ssid, 'ifname', interface,
+                        'password', password],
+                       check=True)
+    except Exception as e:
+        print("[Connect AP] Failed to connect to leader...")
 
 
 # --- MQTT and Socket Infrastructure ---
@@ -468,7 +470,7 @@ class NetworkMonitor:
                     self.reconnect()
                 except Exception as e:
                     print(f"[Monitor] Failed trying to configure network: {e}")
-            self.wait_interruptible(60)
+            self.wait_interruptible(30)
 
     def check_connection(self):
         print(f"[Monitor] Checking connection...")
