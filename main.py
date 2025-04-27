@@ -14,7 +14,7 @@ import threading
 from queue import Empty
 import signal
 import sys
-import delegator
+import random
 import select
 from config_helper import get_config
 
@@ -28,7 +28,7 @@ shutdown_mqtt_event = Event()
 shutdown_socket_event = Event()
 
 
-# --- WiFi Mesh Functions ---
+# --- WiFi Election Functions ---
 def get_serial():
     if platform.system().lower() != "windows":
         with open('/proc/cpuinfo') as f:
@@ -48,10 +48,75 @@ def extract_serial_from_ssid(ssid, prefix):
     return ssid[len(prefix):]
 
 
+def should_become_leader(my_serial, seen_serials):
+    if not seen_serials:
+        return True
+    max_seen = max(seen_serials)
+    return my_serial >= max_seen
+
+
 def elect_leader(remote_serials):
     if remote_serials:
         return max(remote_serials)
     return None
+
+
+def handle_leader_election(my_serial, config):
+    """
+    Returns True if made an AP or connected, False if another connection came online
+    """
+    prefix = config['LEADER_SSID_PREFIX']
+    interface = config['LAN_INTERFACE']
+    password = config['WIFI_PASSWORD']
+
+    seen_serials = scan_for_leaders(prefix)
+
+    if should_become_leader(my_serial, seen_serials):
+        # Random short wait before becoming leader to avoid collision
+        wait_time = random.uniform(1, 5)
+        print(f"[Election] Highest serial ({my_serial}). Waiting {wait_time:.1f}s before promoting to leader...")
+        start = time.time()
+
+        while time.time() - start < wait_time:
+            if shutdown_total_event.is_set():
+                return False
+            seen_serials = scan_for_leaders(prefix)
+            if any(serial != my_serial for serial in seen_serials):
+                print(f"[Election] Another leader detected during backoff. Cancelling promotion.")
+                return False
+
+            time.sleep(1)
+
+        # No leader appeared during wait: become leader
+        print(f"[Election] Promoting self to leader (AP mode)...")
+        setup_ap(my_serial, prefix, interface, password)
+        return True
+
+    else:
+        # Wait for a leader to appear
+        print(f"[Election] Higher serial detected. Waiting for leader...")
+        start = time.time()
+        timeout = 15
+
+        while time.time() - start < timeout:
+            if shutdown_total_event.is_set():
+                return False
+            seen_serials = scan_for_leaders(prefix)
+            leader_serial = elect_leader(seen_serials)
+            if leader_serial:
+                print(f"[Election] Found leader {leader_serial}. Connecting...")
+                connect_to_leader(leader_serial, prefix, interface, password)
+                return True
+            time.sleep(1)
+
+        # If no leader still after timeout, fallback to self
+        print(f"[Election] Timeout waiting for leader. Promoting self.")
+        setup_ap(my_serial, prefix, interface, password)
+        return True
+
+def scan_for_leaders(prefix):
+    seen = scan_wifi(prefix)
+    return [extract_serial_from_ssid(ssid, prefix) for ssid in seen]
 
 
 def get_ssid(interface):
@@ -402,69 +467,6 @@ def print_peer_list(peer_list: dict):
         print(f"{name:<15}|{ip}")
 
 
-#
-# def monitor_and_reelect(my_serial, config, shared_objs, start_event):
-#     while not shutdown_total_event.is_set():
-#         try:
-#             print("")
-#             print(f"[Monitor] Checking connection...")
-#             ssid = get_ssid(config['LAN_INTERFACE'])
-#             print(f"[Monitor] Connection: {ssid}")
-#             print(f"[Monitor] Peers: ")
-#             print_peer_list(shared_objs[2])
-#
-#             if not ssid or ssid and config['LEADER_SSID_PREFIX'] not in ssid:
-#                 raise Exception("[Monitor] Disconnected or wrong network")
-#
-#             print(f"[Monitor] MQTT listener status: {mqtt_process}")
-#             print(f"[Monitor] Socket Listener status: {socket_process}")
-#
-#             if not mqtt_process and not socket_process:
-#                 print(f"[Monitor] Network stack offline... Starting stack")
-#                 start_event.set()
-#
-#             # if (mqtt_process and not socket_process.is_alive()):
-#             #     start_mqtt_listener()
-#             # if (socket_process and not socket_process.is_alive()):
-#             #     start_socket_listener()
-#             print("")
-#         except Exception as e:
-#             try:
-#                 print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
-#                 stop_network_stack()
-#                 time.sleep(5)  # Need to let OS take care of things idk
-#                 if shutdown_total_event.is_set():
-#                     break
-#                 if config["can_configure_network"]:
-#
-#                     seen = scan_wifi(config['LEADER_SSID_PREFIX'])
-#                     remote_serials = [extract_serial_from_ssid(ssid, config['LEADER_SSID_PREFIX']) for ssid in seen]
-#                     leader_serial = elect_leader(remote_serials)
-#
-#                     if not leader_serial or leader_serial == my_serial:
-#                         print(f"[Monitor] No other Pi's Found... Becoming Leader")
-#                         setup_ap(my_serial, config['LEADER_SSID_PREFIX'], config['LAN_INTERFACE'],
-#                                  config['WIFI_PASSWORD'])
-#                         print(f"[Monitor] Successfully became leader")
-#                     else:
-#                         print(f"[Monitor] Mesh Leader Found: {leader_serial}")
-#                         connect_to_leader(leader_serial, config['LEADER_SSID_PREFIX'], config['LAN_INTERFACE'],
-#                                           config['WIFI_PASSWORD'])
-#                         print(f"[Monitor] Successfully connected to: {leader_serial}")
-#
-#                     shared_objs[2][config['name']] = get_my_ip() # Update peer list
-#
-#                     time.sleep(5)
-#                     print(f"[Monitor] Starting stack...")
-#                     start_event.set()
-#                     # start_network_stack(config, *shared_objs)
-#                 else:
-#                     print("[Monitor] Please configure network settings... Exiting...")
-#                     exit()
-#             except Exception as ex:
-#                 print("[Monitor] Failed trying to configure network:", ex)
-#         time.sleep(60)
-
 class NetworkMonitor:
     def __init__(self, config, shared_objs, start_event):
         self.config = config
@@ -511,19 +513,21 @@ class NetworkMonitor:
             print("[Monitor] Please configure network settings... Exiting...")
             sys.exit(1)
 
-        seen = scan_wifi(self.config['LEADER_SSID_PREFIX'])
-        leader_serial = elect_leader([extract_serial_from_ssid(s, self.config['LEADER_SSID_PREFIX']) for s in seen])
+        handle_leader_election(self.my_serial, self.config)
 
-        if not leader_serial or leader_serial == self.my_serial:
-            print(f"[Monitor] No other Pi's Found... Becoming Leader")
-            setup_ap(self.my_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'],
-                     self.config['WIFI_PASSWORD'])
-            print(f"[Monitor] Successfully became leader")
-        else:
-            print(f"[Monitor] Mesh Leader Found: {leader_serial}")
-            connect_to_leader(leader_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'],
-                              self.config['WIFI_PASSWORD'])
-            print(f"[Monitor] Successfully connected to: {leader_serial}")
+        # seen = scan_wifi(self.config['LEADER_SSID_PREFIX'])
+        # leader_serial = elect_leader([extract_serial_from_ssid(s, self.config['LEADER_SSID_PREFIX']) for s in seen])
+        #
+        # if not leader_serial or leader_serial == self.my_serial:
+        #     print(f"[Monitor] No other Pi's Found... Becoming Leader")
+        #     setup_ap(self.my_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'],
+        #              self.config['WIFI_PASSWORD'])
+        #     print(f"[Monitor] Successfully became leader")
+        # else:
+        #     print(f"[Monitor] Mesh Leader Found: {leader_serial}")
+        #     connect_to_leader(leader_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'],
+        #                       self.config['WIFI_PASSWORD'])
+        #     print(f"[Monitor] Successfully connected to: {leader_serial}")
 
         # Update My Peer list value
         self.shared_objs[2][self.config['name']] = get_my_ip()
