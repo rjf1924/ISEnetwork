@@ -75,7 +75,7 @@ def handle_leader_election(my_serial, config):
             connect_to_leader(leader_serial, prefix, interface, password)
             return
 
-    wait_time = random.uniform(1, 10)
+    wait_time = random.uniform(1, 30)
     print(f"[Election] No leader found. Waiting {wait_time:.1f}s before self-promotion...")
     start = time.time()
 
