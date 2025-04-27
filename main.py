@@ -421,7 +421,7 @@ def print_peer_list(peer_list: dict):
 #             if not mqtt_process and not socket_process:
 #                 print(f"[Monitor] Network stack offline... Starting stack")
 #                 start_event.set()
-#             # TODO: Make network stack restart socket/mqtt listener
+#
 #             # if (mqtt_process and not socket_process.is_alive()):
 #             #     start_mqtt_listener()
 #             # if (socket_process and not socket_process.is_alive()):
@@ -477,33 +477,56 @@ class NetworkMonitor:
             try:
                 self.check_connection()
             except Exception as e:
-                self.reconnect()
+                try:
+                    print(f"[Monitor] Mesh Network Lost: {e}. Restarting...")
+                    self.reconnect()
+                except Exception as e:
+                    print(f"[Monitor] Failed trying to configure network: {e}")
             self.wait_interruptible(60)
 
     def check_connection(self):
+        print(f"[Monitor] Checking connection...")
         ssid = get_ssid(self.config['LAN_INTERFACE'])
+        print(f"[Monitor] Connection: {ssid}")
+        print(f"[Monitor] Peers: ")
+        print(f"[Monitor] Peers: ")
+        print_peer_list(self.shared_objs[2])
+
         if not ssid or self.config['LEADER_SSID_PREFIX'] not in ssid:
             raise Exception("Disconnected or wrong network")
 
+        print(f"[Monitor] MQTT listener status: {mqtt_process}")
+        print(f"[Monitor] Socket Listener status: {socket_process}")
+
         if not mqtt_process and not socket_process:
+            print(f"[Monitor] Network stack offline... Starting stack")
             self.start_event.set()
+        # TODO: Make network stack restart socket/mqtt listener
 
     def reconnect(self):
+        print(f"[Monitor] Restarting...")
         stop_network_stack()
         self.wait_interruptible(5)
-        if not self.config.get("can_configure_network", False):
+        if not self.config["can_configure_network"]:
+            print("[Monitor] Please configure network settings... Exiting...")
             sys.exit(1)
 
         seen = scan_wifi(self.config['LEADER_SSID_PREFIX'])
         leader_serial = elect_leader([extract_serial_from_ssid(s, self.config['LEADER_SSID_PREFIX']) for s in seen])
 
         if not leader_serial or leader_serial == self.my_serial:
+            print(f"[Monitor] No other Pi's Found... Becoming Leader")
             setup_ap(self.my_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'], self.config['WIFI_PASSWORD'])
+            print(f"[Monitor] Successfully became leader")
         else:
+            print(f"[Monitor] Mesh Leader Found: {leader_serial}")
             connect_to_leader(leader_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'], self.config['WIFI_PASSWORD'])
+            print(f"[Monitor] Successfully connected to: {leader_serial}")
 
+        # Update My Peer list value
         self.shared_objs[2][self.config['name']] = get_my_ip()
         self.wait_interruptible(5)
+        print(f"[Monitor] Starting stack...")
         self.start_event.set()
 
     def wait_interruptible(self, seconds):
