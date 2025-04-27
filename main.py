@@ -401,6 +401,7 @@ def print_peer_list(peer_list: dict):
     for name, ip in peer_list.items():
         print(f"{name:<15}|{ip}")
 
+
 #
 # def monitor_and_reelect(my_serial, config, shared_objs, start_event):
 #     while not shutdown_total_event.is_set():
@@ -516,11 +517,13 @@ class NetworkMonitor:
 
         if not leader_serial or leader_serial == self.my_serial:
             print(f"[Monitor] No other Pi's Found... Becoming Leader")
-            setup_ap(self.my_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'], self.config['WIFI_PASSWORD'])
+            setup_ap(self.my_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'],
+                     self.config['WIFI_PASSWORD'])
             print(f"[Monitor] Successfully became leader")
         else:
             print(f"[Monitor] Mesh Leader Found: {leader_serial}")
-            connect_to_leader(leader_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'], self.config['WIFI_PASSWORD'])
+            connect_to_leader(leader_serial, self.config['LEADER_SSID_PREFIX'], self.config['LAN_INTERFACE'],
+                              self.config['WIFI_PASSWORD'])
             print(f"[Monitor] Successfully connected to: {leader_serial}")
 
         # Update My Peer list value
@@ -533,6 +536,7 @@ class NetworkMonitor:
         for _ in range(seconds):
             if self.shutdown_event.wait(1):
                 break
+
 
 def graceful_exit(signum, frame, config):
     print("[Shutdown] Shutdown signal received. Exiting...")
