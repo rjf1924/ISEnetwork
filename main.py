@@ -88,8 +88,11 @@ def handle_leader_election(my_serial, config):
             leader_serial = elect_leader(seen_serials)
             if leader_serial:
                 print(f"[Election] Found leader {leader_serial} during backoff. Connecting...")
-                connect_to_leader(leader_serial, prefix, interface, password)
-                return
+                res = connect_to_leader(leader_serial, prefix, interface, password)
+                if res:
+                    return
+                else:
+                    print(f"[Election] Failed to connect... Rescanning...")
 
         time.sleep(0.5)
 
@@ -157,8 +160,9 @@ def connect_to_leader(leader_serial, prefix, interface, password):
                         ssid, 'ifname', interface,
                         'password', password],
                        check=True)
+        return True
     except Exception as e:
-        print("[Connect AP] Failed to connect to leader...")
+        return  False
 
 
 # --- MQTT and Socket Infrastructure ---
