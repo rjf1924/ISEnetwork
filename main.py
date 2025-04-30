@@ -333,17 +333,17 @@ class SharedManager(BaseManager): pass
 
 
 # --- IP SETTINGS ---
-def get_server_ip():
+def get_server_ip(interface):
     gws = netifaces.gateways()
     if len(gws['default']) == 0:
-        return get_my_ip()
+        return get_my_ip(interface)
     return gws['default'][netifaces.AF_INET][0]
 
 
-def get_my_ip(config):
+def get_my_ip(interface):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, config['LAN_INTERFACE'].encode())
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode())
         try:
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
@@ -351,7 +351,7 @@ def get_my_ip(config):
             s.close()
     except Exception as e:
         try:
-            return netifaces.ifaddresses(config['LAN_INTERFACE'])[netifaces.AF_INET][0]['addr']
+            return netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
         except (KeyError, IndexError):
             return None
 
@@ -420,7 +420,7 @@ def start_mqtt_listener(config, mqtt_pub_queue, peer_list):
     global mqtt_process
     print("[Network Stack] Starting MQTT Listener...")
     mqtt_process = Process(target=mqtt_listener,
-                           args=(config, get_my_ip(), get_server_ip(), mqtt_pub_queue, peer_list, shutdown_mqtt_event))
+                           args=(config, get_my_ip(config['LAN_INTERFACE']), get_server_ip(config['LAN_INTERFACE']), mqtt_pub_queue, peer_list, shutdown_mqtt_event))
     mqtt_process.start()
 
 
@@ -429,7 +429,7 @@ def start_socket_listener(config, socket_queue, peer_list):
     print("[Network Stack] Starting Socket Listener...")
     socket_process = Process(target=socket_listener,
                              args=(
-                                 config, get_my_ip(), get_server_ip(), socket_queue, peer_list, shutdown_socket_event))
+                                 config, get_my_ip(config['LAN_INTERFACE']), get_server_ip(config['LAN_INTERFACE']), socket_queue, peer_list, shutdown_socket_event))
     socket_process.start()
 
 
@@ -532,7 +532,7 @@ class NetworkMonitor:
         #     print(f"[Monitor] Successfully connected to: {leader_serial}")
 
         # Update My Peer list value
-        self.shared_objs[2][self.config['name']] = get_my_ip()
+        self.shared_objs[2][self.config['name']] = get_my_ip(self.config['LAN_INTERFACE'])
         self.wait_interruptible(5)
         print(f"[Monitor] Starting stack...")
         self.start_event.set()
