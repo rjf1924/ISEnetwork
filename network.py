@@ -109,7 +109,7 @@ class SocketConnection:
         self.reconnect_delay = reconnect_delay
         self.socket = None
         self.lock = threading.Lock()
-        self.interface = config['ise411meshnet']
+        self.interface = config['LAN_INTERFACE']
         self.connect()
 
     def connect(self):
@@ -118,7 +118,7 @@ class SocketConnection:
                 if self.target_user in get_peers():
                     self.addr = resolve_ip(self.target_user)
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, config['LAN_INTERFACE'].encode())
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, self.interface.encode())
                     s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     s.connect((self.addr, self.port))
 
