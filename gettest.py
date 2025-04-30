@@ -9,7 +9,7 @@ def on_msg(msg):
 if __name__ == '__main__':
     import network
 
-    network.subscribe("command", on_msg)
+    network.subscribe("James/Distance", on_msg)
     network.start_loop()
 
     for data in network.get_next_frame():

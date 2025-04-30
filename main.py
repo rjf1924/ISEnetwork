@@ -17,6 +17,7 @@ import sys
 import random
 import select
 from config_helper import get_config
+import errno
 
 # --- Global Variables ---
 active_sockets = set()
@@ -101,6 +102,7 @@ def handle_leader_election(my_serial, config):
 
     print(f"[Election] No leader appeared. Promoting self to leader...")
     setup_ap(my_serial, prefix, interface, password)
+    return True
 
 
 def scan_for_leaders(prefix):
@@ -164,8 +166,9 @@ def connect_to_leader(leader_serial, prefix, interface, password):
                         'password', password],
                        check=True)
         return True
+
     except Exception as e:
-        return  False
+        return False
 
 
 # --- MQTT and Socket Infrastructure ---
@@ -278,25 +281,35 @@ def socket_listener(config, client_ip, server_ip, socket_queue, peer_list, shutd
             recv_buffer = bytearray()
 
             while True:
-                chunk = conn.recv(4096)
-                if not chunk:
-                    break
-                recv_buffer.extend(chunk)
+                try:
+                    chunk = conn.recv(4096)
+                    if not chunk:
+                        break  # connection closed cleanly
+                    recv_buffer.extend(chunk)
 
-                while len(recv_buffer) >= 4:
-                    size = int.from_bytes(recv_buffer[:4], 'big')
-                    if len(recv_buffer) < 4 + size:
-                        break
-                    data = recv_buffer[4:4 + size]
-                    try:
-                        socket_queue.put_nowait((str(addr), data))
-                    except queue.Full:
+                    while len(recv_buffer) >= 4:
+                        size = int.from_bytes(recv_buffer[:4], 'big')
+                        if len(recv_buffer) < 4 + size:
+                            break
+                        data = recv_buffer[4:4 + size]
                         try:
-                            socket_queue.get_nowait()
-                        except queue.Empty:
-                            pass
-                        socket_queue.put_nowait((str(addr), data))
-                    recv_buffer = recv_buffer[4 + size:]
+                            socket_queue.put_nowait((str(addr), data))
+                        except queue.Full:
+                            try:
+                                socket_queue.get_nowait()
+                            except queue.Empty:
+                                pass
+                            socket_queue.put_nowait((str(addr), data))
+                        recv_buffer = recv_buffer[4 + size:]
+
+                except (BlockingIOError, InterruptedError):
+                    continue  # no data yet; expected in non-blocking mode
+
+                except OSError as e:
+                    if (hasattr(e, 'winerror') and e.winerror == 10035) or \
+                            (e.errno in (errno.EAGAIN, errno.EWOULDBLOCK)):
+                        continue  # no data available; normal for non-blocking
+                    raise  # other unexpected errors
 
         except Exception as e:
             print(f"[Socket] Error: {e}")
