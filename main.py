@@ -300,6 +300,7 @@ def socket_listener(config, client_ip, server_ip, socket_queue, peer_list, shutd
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, config['LAN_INTERFACE'].encode())
     server_socket.bind(("0.0.0.0", 25000))
     server_socket.listen()
     server_socket.setblocking(False)

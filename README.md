@@ -2,6 +2,7 @@
 # Prerequisites
 None for now 
 # Installation
+use chmod +x install.sh
 To install, clone this repository and run install.sh followed by run.sh
 # Usage
 while running your client (run.sh) import network into your own python programs to be connected to the ISE net   

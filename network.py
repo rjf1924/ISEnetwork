@@ -91,6 +91,7 @@ def send_frame(addr, frame):
     size = len(data)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, config['LAN_INTERFACE'].encode())
         s.connect((addr, 25000))
         s.sendall((size.to_bytes(4, 'big')))
         s.sendall(data)
@@ -108,6 +109,7 @@ class SocketConnection:
         self.reconnect_delay = reconnect_delay
         self.socket = None
         self.lock = threading.Lock()
+        self.interface = config['ise411meshnet']
         self.connect()
 
     def connect(self):
@@ -116,8 +118,10 @@ class SocketConnection:
                 if self.target_user in get_peers():
                     self.addr = resolve_ip(self.target_user)
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.connect((self.addr, self.port))
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, config['LAN_INTERFACE'].encode())
                     s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                    s.connect((self.addr, self.port))
+
                     self.socket = s
                     print(f"[Socket Connection] Connected to {self.target_user}|{self.addr}")
                     break
