@@ -258,6 +258,7 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         except Empty:
             time.sleep(0.01)
 
+    client.publish(f"status/{config['name']}", "offline", retain=True)
     client.loop_stop()
     client.disconnect()
     print("[MQTT Listener] Exiting...")
