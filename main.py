@@ -72,8 +72,11 @@ def handle_leader_election(my_serial, config):
         leader_serial = elect_leader(seen_serials)
         if leader_serial:
             print(f"[Election] Found leader {leader_serial} immediately. Connecting...")
-            connect_to_leader(leader_serial, prefix, interface, password)
-            return
+            res = connect_to_leader(leader_serial, prefix, interface, password)
+            if res:
+                return True
+            else:
+                print(f"[Election] Failed to connect...")
 
     wait_time = random.uniform(1, 30)
     print(f"[Election] No leader found. Waiting {wait_time:.1f}s before self-promotion...")
@@ -90,7 +93,7 @@ def handle_leader_election(my_serial, config):
                 print(f"[Election] Found leader {leader_serial} during backoff. Connecting...")
                 res = connect_to_leader(leader_serial, prefix, interface, password)
                 if res:
-                    return
+                    return True
                 else:
                     print(f"[Election] Failed to connect... Rescanning...")
 
@@ -518,8 +521,11 @@ class NetworkMonitor:
             print("[Monitor] Please configure network settings... Exiting...")
             sys.exit(1)
 
-        handle_leader_election(self.my_serial, self.config)
+        res = handle_leader_election(self.my_serial, self.config)
 
+        if not res:
+            print(f"[Monitor] Error during leader election...")
+            return
         # seen = scan_wifi(self.config['LEADER_SSID_PREFIX'])
         # leader_serial = elect_leader([extract_serial_from_ssid(s, self.config['LEADER_SSID_PREFIX']) for s in seen])
         #

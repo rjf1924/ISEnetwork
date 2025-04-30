@@ -1,4 +1,5 @@
 import pickle
+import platform
 from multiprocessing.managers import BaseManager
 import threading
 import socket
@@ -120,7 +121,8 @@ class SocketConnection:
                 if self.target_user in get_peers():
                     self.addr = resolve_ip(self.target_user)
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, self.interface.encode())
+                    if platform.system() == "Linux":
+                        s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, self.interface.encode())
                     s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     s.connect((self.addr, self.port))
 
