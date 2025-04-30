@@ -213,21 +213,13 @@ def mqtt_listener(config, client_ip, server_ip, publish_queue, peer_list, shutdo
         client.publish("connect", f"{config['name']}:{client_ip}")
         client.publish(f"status/{config['name']}", "online", retain=True)
 
-    def create_socket():
-        # Need a socket binded on the custom interface the client wants
-        iface = config['LAN_INTERFACE']
-        iface_ip = netifaces.ifaddresses(iface)[netifaces.AF_INET][0]['addr']
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((iface_ip, 0))  # bind to interface IP, random port
-        return s
 
     client = mqtt.Client(protocol=mqtt.MQTTv311)
     client.on_message = on_message
     client.on_connect = on_connect
     client.will_set(f"status/{config['name']}", payload="offline", qos=1, retain=True)
 
-    client.socket = create_socket()  # force interface
     client.connect(server_ip, int(config["mosquitto_port"]))
     client.loop_start()
 
@@ -348,9 +340,10 @@ def get_server_ip():
     return gws['default'][netifaces.AF_INET][0]
 
 
-def get_my_ip():
+def get_my_ip(config):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, config['LAN_INTERFACE'].encode())
         try:
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
@@ -358,7 +351,7 @@ def get_my_ip():
             s.close()
     except Exception as e:
         try:
-            return netifaces.ifaddresses('wlan0')[netifaces.AF_INET][0]['addr']
+            return netifaces.ifaddresses(config['LAN_INTERFACE'])[netifaces.AF_INET][0]['addr']
         except (KeyError, IndexError):
             return None
 
