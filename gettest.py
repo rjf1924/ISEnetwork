@@ -1,8 +1,9 @@
 import cv2
-from camerautils import  decode_image
+from camerautils import decode_image
+
+
 def on_msg(msg):
     print(f"Recieved: {msg}")
-
 
 
 if __name__ == '__main__':

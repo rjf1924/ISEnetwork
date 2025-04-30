@@ -343,7 +343,8 @@ def get_server_ip(interface):
 def get_my_ip(interface):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode())
+        if platform.system() == "Linux":
+            s.setsockopt(socket.SOL_SOCKET, 25, interface.encode())  # SO_BINDTODEVICE = 25
         try:
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
@@ -493,7 +494,7 @@ class NetworkMonitor:
 
         print(f"[Monitor] MQTT listener status: {mqtt_process}")
         print(f"[Monitor] Socket Listener status: {socket_process}")
-
+        # TODO: Ensure netwotk connection is good before starting other processes.
         if not mqtt_process and not socket_process:
             print(f"[Monitor] Network stack offline... Starting stack")
             self.start_event.set()

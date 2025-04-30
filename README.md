@@ -33,6 +33,22 @@ example of a command subscriber:
         while True:
             pass
 
+For sockets, you can use network.get_next_frame() which returns the address, frame of any incoming frames 
+
+    if __name__ == '__main__':
+        import network
+    
+        for data in network.get_next_frame():
+            if data is not None:
+                address, frame = data
+                img = decode_image(frame)
+                cv2.imshow(network.resolve_name(address[0]), img)
+                cv2.waitKey(1)
+    
+        while True:
+            print("Entering forever loop")
+
+
 
 You can get a list of all peers on the network with
 

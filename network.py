@@ -102,7 +102,7 @@ class SocketConnection:
     Establish a socket connection between two devices
     """
 
-    def __init__(self, name, port=25000, reconnect_delay=2):
+    def __init__(self, name, port=25000, reconnect_delay=2, reconnect_tries=-1):
         self.addr = None
         self.target_user = name
         self.port = port
@@ -110,10 +110,12 @@ class SocketConnection:
         self.socket = None
         self.lock = threading.Lock()
         self.interface = config['LAN_INTERFACE']
+        self.reconnect_tries = reconnect_tries
         self.connect()
 
     def connect(self):
-        while True:
+        tries = 0
+        while tries < self.reconnect_tries or self.reconnect_tries == -1:
             try:
                 if self.target_user in get_peers():
                     self.addr = resolve_ip(self.target_user)
@@ -131,6 +133,7 @@ class SocketConnection:
             except Exception as e:
                 print(f"[Socket Connection] Failed to connect to {self.addr}, retrying in {self.reconnect_delay}s")
                 time.sleep(self.reconnect_delay)
+                tries += 1
 
     def send(self, frame):
         try:
